@@ -2254,7 +2254,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     var ap = this.getAbsolutePosition();
     var pos =
       stage._getPointerById(pointerId) ||
-      stage._changedPointerPositions[0] ||
       ap;
     DD._dragElements.set(this._id, {
       node: this,

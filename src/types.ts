@@ -28,13 +28,13 @@ export interface IFrame {
 export type AnimationFn = (frame?: IFrame) => boolean|void;
 
 export enum KonvaNodeEvent {
-  mouseover = 'mouseover',
-  mouseout = 'mouseout',
-  mousemove = 'mousemove',
-  mouseleave = 'mouseleave',
-  mouseenter = 'mouseenter',
-  mousedown = 'mousedown',
-  mouseup = 'mouseup',
+  pointerover = 'pointerover',
+  pointerout = 'pointerout',
+  pointermove = 'pointermove',
+  pointerleave = 'pointerleave',
+  pointerenter = 'pointerenter',
+  pointerdown = 'pointerdown',
+  pointerup = 'pointerup',
   wheel = 'wheel',
   contextmenu = 'contextmenu',
   click = 'click',

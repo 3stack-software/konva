@@ -2,13 +2,13 @@
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.Konva = factory());
-}(this, function () { 'use strict';
+}(this, (function () { 'use strict';
 
   /*
    * Konva JavaScript Framework v4.0.16
    * http://konvajs.org/
    * Licensed under the MIT
-   * Date: Mon Oct 21 2019
+   * Date: Fri Nov 01 2019
    *
    * Original work Copyright (C) 2011 - 2013 by Eric Rowell (KineticJS)
    * Modified work Copyright (C) 2014 - present by Anton Lavrenov (Konva)
@@ -1151,6 +1151,9 @@
           return target;
       },
       _getFirstPointerId: function (evt) {
+          if (evt.pointerId) {
+              return evt.pointerId;
+          }
           if (!evt.touches) {
               // fake id for mouse
               return 999;
@@ -2380,6 +2383,9 @@
       _dragElements: new Map(),
       // methods
       _drag: function (evt) {
+          if (evt.pointerId && evt.pointerType !== 'mouse') {
+              return;
+          }
           DD._dragElements.forEach(function (elem, key) {
               var node = elem.node;
               // we need to find pointer relative to that node
@@ -2390,7 +2396,7 @@
               if (elem.pointerId === undefined) {
                   elem.pointerId = Util._getFirstPointerId(evt);
               }
-              var pos = stage._changedPointerPositions.find(function (pos) { return pos.id === elem.pointerId; });
+              var pos = stage._changedPointerPositions.get(elem.pointerId);
               // not related pointer
               if (!pos) {
                   return;
@@ -2419,6 +2425,9 @@
       // dragBefore and dragAfter allows us to set correct order of events
       // setup all in dragbefore, and stop dragging only after pointerup triggered.
       _endDragBefore: function (evt) {
+          if (evt.pointerId && evt.pointerType !== 'mouse') {
+              return;
+          }
           DD._dragElements.forEach(function (elem, key) {
               var node = elem.node;
               // we need to find pointer relative to that node
@@ -2426,7 +2435,7 @@
               if (evt) {
                   stage.setPointersPositions(evt);
               }
-              var pos = stage._changedPointerPositions.find(function (pos) { return pos.id === elem.pointerId; });
+              var pos = stage._changedPointerPositions.get(elem.pointerId);
               // that pointer is not related
               if (!pos) {
                   return;
@@ -2444,6 +2453,9 @@
           });
       },
       _endDragAfter: function (evt) {
+          if (evt.pointerId && evt.pointerType !== 'mouse') {
+              return;
+          }
           DD._dragElements.forEach(function (elem, key) {
               if (elem.dragStatus === 'stopped') {
                   elem.node.fire('dragend', {
@@ -2459,11 +2471,11 @@
       }
   };
   if (Konva.isBrowser) {
-      window.addEventListener('mouseup', DD._endDragBefore, true);
+      window.addEventListener('pointerup', DD._endDragBefore, true);
       window.addEventListener('touchend', DD._endDragBefore, true);
-      window.addEventListener('mousemove', DD._drag);
+      window.addEventListener('pointermove', DD._drag);
       window.addEventListener('touchmove', DD._drag);
-      window.addEventListener('mouseup', DD._endDragAfter, false);
+      window.addEventListener('pointerup', DD._endDragAfter, false);
       window.addEventListener('touchend', DD._endDragAfter, false);
   }
 
@@ -4343,7 +4355,6 @@
           var stage = this.getStage();
           var ap = this.getAbsolutePosition();
           var pos = stage._getPointerById(pointerId) ||
-              stage._changedPointerPositions[0] ||
               ap;
           DD._dragElements.set(this._id, {
               node: this,
@@ -5521,7 +5532,7 @@
                   break;
               }
           }
-          if (hasVisible) {
+          if (hasVisible && minX !== undefined) {
               selfRect = {
                   x: minX,
                   y: minY,
@@ -5686,23 +5697,18 @@
   }
 
   // CONSTANTS
-  var STAGE$1 = 'Stage', STRING = 'string', PX = 'px', MOUSEOUT = 'mouseout', MOUSELEAVE$1 = 'mouseleave', MOUSEOVER = 'mouseover', MOUSEENTER$1 = 'mouseenter', MOUSEMOVE = 'mousemove', MOUSEDOWN = 'mousedown', MOUSEUP = 'mouseup', 
-  // TODO: add them into "on" method docs and into site docs
-  POINTERMOVE = 'pointermove', POINTERDOWN = 'pointerdown', POINTERUP = 'pointerup', POINTERCANCEL = 'pointercancel', LOSTPOINTERCAPTURE = 'lostpointercapture', CONTEXTMENU = 'contextmenu', CLICK = 'click', DBL_CLICK = 'dblclick', TOUCHSTART = 'touchstart', TOUCHEND = 'touchend', TAP = 'tap', DBL_TAP = 'dbltap', TOUCHMOVE = 'touchmove', WHEEL = 'wheel', CONTENT_MOUSEOUT = 'contentMouseout', CONTENT_MOUSEOVER = 'contentMouseover', CONTENT_MOUSEMOVE = 'contentMousemove', CONTENT_MOUSEDOWN = 'contentMousedown', CONTENT_MOUSEUP = 'contentMouseup', CONTENT_CONTEXTMENU = 'contentContextmenu', CONTENT_CLICK = 'contentClick', CONTENT_DBL_CLICK = 'contentDblclick', CONTENT_TOUCHSTART = 'contentTouchstart', CONTENT_TOUCHEND = 'contentTouchend', CONTENT_DBL_TAP = 'contentDbltap', CONTENT_TAP = 'contentTap', CONTENT_TOUCHMOVE = 'contentTouchmove', CONTENT_WHEEL = 'contentWheel', RELATIVE = 'relative', KONVA_CONTENT = 'konvajs-content', UNDERSCORE = '_', CONTAINER = 'container', MAX_LAYERS_NUMBER = 5, EMPTY_STRING$1 = '', EVENTS = [
-      MOUSEENTER$1,
-      MOUSEDOWN,
-      MOUSEMOVE,
-      MOUSEUP,
-      MOUSEOUT,
-      TOUCHSTART,
-      TOUCHMOVE,
-      TOUCHEND,
-      MOUSEOVER,
-      WHEEL,
-      CONTEXTMENU,
+  var STAGE$1 = 'Stage', STRING = 'string', PX = 'px', POINTER_TYPE_MOUSE = 'mouse', POINTEROUT = 'pointerout', POINTERLEAVE = 'pointerleave', POINTEROVER = 'pointerover', POINTERENTER = 'pointerenter', POINTERMOVE = 'pointermove', POINTERDOWN = 'pointerdown', POINTERUP = 'pointerup', POINTERCANCEL = 'pointercancel', LOSTPOINTERCAPTURE = 'lostpointercapture', CONTEXTMENU = 'contextmenu', CLICK = 'click', DBL_CLICK = 'dblclick', TOUCHSTART = 'touchstart', TOUCHEND = 'touchend', TAP = 'tap', DBL_TAP = 'dbltap', TOUCHMOVE = 'touchmove', WHEEL = 'wheel', CONTENT_POINTEROUT = 'contentPointerout', CONTENT_POINTEROVER = 'contentPointerover', CONTENT_POINTERMOVE = 'contentPointermove', CONTENT_POINTERDOWN = 'contentPointerdown', CONTENT_POINTERUP = 'contentPointerup', CONTENT_CONTEXTMENU = 'contentContextmenu', CONTENT_CLICK = 'contentClick', CONTENT_DBL_CLICK = 'contentDblclick', CONTENT_TOUCHSTART = 'contentTouchstart', CONTENT_TOUCHEND = 'contentTouchend', CONTENT_DBL_TAP = 'contentDbltap', CONTENT_TAP = 'contentTap', CONTENT_TOUCHMOVE = 'contentTouchmove', CONTENT_POINTERMOVE = 'contentPointermove', CONTENT_POINTERDOWN = 'contentPointerdown', CONTENT_POINTERUP = 'contentPointerup', CONTENT_WHEEL = 'contentWheel', RELATIVE = 'relative', KONVA_CONTENT = 'konvajs-content', UNDERSCORE = '_', CONTAINER = 'container', MAX_LAYERS_NUMBER = 5, EMPTY_STRING$1 = '', EVENTS = [
+      POINTERENTER,
       POINTERDOWN,
       POINTERMOVE,
       POINTERUP,
+      POINTEROUT,
+      TOUCHSTART,
+      TOUCHMOVE,
+      TOUCHEND,
+      POINTEROVER,
+      WHEEL,
+      CONTEXTMENU,
       POINTERCANCEL,
       LOSTPOINTERCAPTURE
   ], 
@@ -5713,7 +5719,6 @@
           ctx[UNDERSCORE + eventName](evt);
       }, false);
   }
-  var NO_POINTERS_MESSAGE = "Pointer position is missing and not registered by the stage. Looks like it is outside of the stage container. You can set it manually from event: stage.setPointersPositions(event);";
   var stages = [];
   function checkNoClip(attrs) {
       if (attrs === void 0) { attrs = {}; }
@@ -5760,8 +5765,8 @@
       __extends(Stage, _super);
       function Stage(config) {
           var _this = _super.call(this, checkNoClip(config)) || this;
-          _this._pointerPositions = [];
-          _this._changedPointerPositions = [];
+          _this._pointerPositions = new Map();
+          _this._changedPointerPositions = new Map();
           _this._buildDOM();
           _this._bindContentEvents();
           stages.push(_this);
@@ -5854,25 +5859,8 @@
           }
           return this;
       };
-      /**
-       * get pointer position which can be a touch position or mouse position
-       * @method
-       * @name Konva.Stage#getPointerPosition
-       * @returns {Vector2d|null}
-       */
-      Stage.prototype.getPointerPosition = function () {
-          var pos = this._pointerPositions[0] || this._changedPointerPositions[0];
-          if (!pos) {
-              Util.warn(NO_POINTERS_MESSAGE);
-              return null;
-          }
-          return {
-              x: pos.x,
-              y: pos.y
-          };
-      };
       Stage.prototype._getPointerById = function (id) {
-          return this._pointerPositions.find(function (p) { return p.id === id; });
+          return this._pointerPositions.get(id);
       };
       Stage.prototype.getPointersPositions = function () {
           return this._pointerPositions;
@@ -6000,76 +5988,88 @@
               addEvent(this, EVENTS[n]);
           }
       };
-      Stage.prototype._mouseenter = function (evt) {
+      Stage.prototype._pointerenter = function (evt) {
+          if (evt.pointerType !== POINTER_TYPE_MOUSE) {
+              return;
+          }
           this.setPointersPositions(evt);
-          this._fire(MOUSEENTER$1, { evt: evt, target: this, currentTarget: this });
+          var pointerId = evt.pointerId;
+          this._fire(POINTERENTER, { evt: evt, pointerId: pointerId, target: this, currentTarget: this });
       };
-      Stage.prototype._mouseover = function (evt) {
+      Stage.prototype._pointerover = function (evt) {
+          if (evt.pointerType !== POINTER_TYPE_MOUSE) {
+              return;
+          }
           this.setPointersPositions(evt);
-          this._fire(CONTENT_MOUSEOVER, { evt: evt });
-          this._fire(MOUSEOVER, { evt: evt, target: this, currentTarget: this });
+          var pointerId = evt.pointerId;
+          this._fire(CONTENT_POINTEROVER, { evt: evt });
+          this._fire(POINTEROVER, { evt: evt, pointerId: pointerId, target: this, currentTarget: this });
       };
-      Stage.prototype._mouseout = function (evt) {
+      Stage.prototype._pointerout = function (evt) {
+          if (evt.pointerType !== POINTER_TYPE_MOUSE) {
+              return;
+          }
           this.setPointersPositions(evt);
+          var pointerId = evt.pointerId;
           var targetShape = this.targetShape;
           var eventsEnabled = !DD.isDragging || Konva.hitOnDragEnabled;
           if (targetShape && eventsEnabled) {
-              targetShape._fireAndBubble(MOUSEOUT, { evt: evt });
-              targetShape._fireAndBubble(MOUSELEAVE$1, { evt: evt });
+              targetShape._fireAndBubble(POINTEROUT, { evt: evt, pointerId: pointerId });
+              targetShape._fireAndBubble(POINTERLEAVE, { evt: evt, pointerId: pointerId });
               this.targetShape = null;
           }
           else if (eventsEnabled) {
-              this._fire(MOUSELEAVE$1, {
+              this._fire(POINTERLEAVE, {
                   evt: evt,
+                  pointerId: pointerId,
                   target: this,
                   currentTarget: this
               });
-              this._fire(MOUSEOUT, {
+              this._fire(POINTEROUT, {
                   evt: evt,
+                  pointerId: pointerId,
                   target: this,
                   currentTarget: this
               });
           }
-          this.pointerPos = undefined;
-          this._pointerPositions = [];
-          this._fire(CONTENT_MOUSEOUT, { evt: evt });
+          this._pointerPositions.delete(evt.pointerId);
+          this._fire(CONTENT_POINTEROUT, { evt: evt });
       };
-      Stage.prototype._mousemove = function (evt) {
-          // workaround for mobile IE to force touch event when unhandled pointer event elevates into a mouse event
-          if (Konva.UA.ieMobile) {
-              return this._touchmove(evt);
+      Stage.prototype._pointermove = function (evt) {
+          if (evt.pointerType !== POINTER_TYPE_MOUSE) {
+              return;
           }
           this.setPointersPositions(evt);
-          var pointerId = Util._getFirstPointerId(evt);
-          var shape;
+          var pointerId = evt.pointerId;
           var eventsEnabled = !DD.isDragging || Konva.hitOnDragEnabled;
           if (eventsEnabled) {
-              shape = this.getIntersection(this.getPointerPosition());
+              var shape = getCapturedShape(pointerId)
+                  || this.getIntersection(this._getPointerById(pointerId));
               if (shape && shape.isListening()) {
                   var differentTarget = !this.targetShape || this.targetShape !== shape;
                   if (eventsEnabled && differentTarget) {
                       if (this.targetShape) {
-                          this.targetShape._fireAndBubble(MOUSEOUT, { evt: evt, pointerId: pointerId }, shape);
-                          this.targetShape._fireAndBubble(MOUSELEAVE$1, { evt: evt, pointerId: pointerId }, shape);
+                          this.targetShape._fireAndBubble(POINTEROUT, { evt: evt, pointerId: pointerId }, shape);
+                          this.targetShape._fireAndBubble(POINTERLEAVE, { evt: evt, pointerId: pointerId }, shape);
                       }
-                      shape._fireAndBubble(MOUSEOVER, { evt: evt, pointerId: pointerId }, this.targetShape);
-                      shape._fireAndBubble(MOUSEENTER$1, { evt: evt, pointerId: pointerId }, this.targetShape);
-                      shape._fireAndBubble(MOUSEMOVE, { evt: evt, pointerId: pointerId });
+                      shape._fireAndBubble(POINTEROVER, { evt: evt, pointerId: pointerId }, this.targetShape);
+                      shape._fireAndBubble(POINTERENTER, { evt: evt, pointerId: pointerId }, this.targetShape);
+                      shape._fireAndBubble(POINTERMOVE, { evt: evt, pointerId: pointerId });
                       this.targetShape = shape;
                   }
                   else {
-                      shape._fireAndBubble(MOUSEMOVE, { evt: evt, pointerId: pointerId });
+                      shape._fireAndBubble(POINTERMOVE, { evt: evt, pointerId: pointerId });
                   }
               }
               else {
                   /*
                    * if no shape was detected, clear target shape and try
-                   * to run mouseout from previous target shape
+                   * to run pointerout from previous target shape
                    */
                   if (this.targetShape && eventsEnabled) {
-                      this.targetShape._fireAndBubble(MOUSEOUT, { evt: evt, pointerId: pointerId });
-                      this.targetShape._fireAndBubble(MOUSELEAVE$1, { evt: evt, pointerId: pointerId });
-                      this._fire(MOUSEOVER, {
+                      this.targetShape._fireAndBubble(POINTEROUT, { evt: evt, pointerId: pointerId });
+                      this.targetShape._fireAndBubble(POINTERLEAVE, { evt: evt, pointerId: pointerId });
+                      this._fire(POINTEROVER, {
                           evt: evt,
                           target: this,
                           currentTarget: this,
@@ -6077,7 +6077,7 @@
                       });
                       this.targetShape = null;
                   }
-                  this._fire(MOUSEMOVE, {
+                  this._fire(POINTERMOVE, {
                       evt: evt,
                       target: this,
                       currentTarget: this,
@@ -6085,7 +6085,7 @@
                   });
               }
               // content event
-              this._fire(CONTENT_MOUSEMOVE, { evt: evt });
+              this._fire(CONTENT_POINTERMOVE, { evt: evt });
           }
           // always call preventDefault for desktop events because some browsers
           // try to drag and drop the canvas element
@@ -6093,21 +6093,21 @@
               evt.preventDefault();
           }
       };
-      Stage.prototype._mousedown = function (evt) {
-          // workaround for mobile IE to force touch event when unhandled pointer event elevates into a mouse event
-          if (Konva.UA.ieMobile) {
-              return this._touchstart(evt);
+      Stage.prototype._pointerdown = function (evt) {
+          if (evt.pointerType !== POINTER_TYPE_MOUSE) {
+              return;
           }
           this.setPointersPositions(evt);
-          var pointerId = Util._getFirstPointerId(evt);
-          var shape = this.getIntersection(this.getPointerPosition());
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
           Konva.listenClickTap = true;
           if (shape && shape.isListening()) {
               this.clickStartShape = shape;
-              shape._fireAndBubble(MOUSEDOWN, { evt: evt, pointerId: pointerId });
+              shape._fireAndBubble(POINTERDOWN, { evt: evt, pointerId: pointerId });
           }
           else {
-              this._fire(MOUSEDOWN, {
+              this._fire(POINTERDOWN, {
                   evt: evt,
                   target: this,
                   currentTarget: this,
@@ -6115,7 +6115,7 @@
               });
           }
           // content event
-          this._fire(CONTENT_MOUSEDOWN, { evt: evt });
+          this._fire(CONTENT_POINTERDOWN, { evt: evt });
           // Do not prevent default behavior, because it will prevent listening events outside of window iframe
           // we used preventDefault for disabling native drag&drop
           // but userSelect = none style will do the trick
@@ -6123,14 +6123,14 @@
           //   evt.preventDefault();
           // }
       };
-      Stage.prototype._mouseup = function (evt) {
-          // workaround for mobile IE to force touch event when unhandled pointer event elevates into a mouse event
-          if (Konva.UA.ieMobile) {
-              return this._touchend(evt);
+      Stage.prototype._pointerup = function (evt) {
+          if (evt.pointerType !== POINTER_TYPE_MOUSE) {
+              return;
           }
           this.setPointersPositions(evt);
-          var pointerId = Util._getFirstPointerId(evt);
-          var shape = this.getIntersection(this.getPointerPosition()), clickStartShape = this.clickStartShape, clickEndShape = this.clickEndShape, fireDblClick = false;
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId)), clickStartShape = this.clickStartShape, clickEndShape = this.clickEndShape, fireDblClick = false;
           if (Konva.inDblClickWindow) {
               fireDblClick = true;
               clearTimeout(this.dblTimeout);
@@ -6149,7 +6149,7 @@
           }, Konva.dblClickWindow);
           if (shape && shape.isListening()) {
               this.clickEndShape = shape;
-              shape._fireAndBubble(MOUSEUP, { evt: evt, pointerId: pointerId });
+              shape._fireAndBubble(POINTERUP, { evt: evt, pointerId: pointerId });
               // detect if click or double click occurred
               if (Konva.listenClickTap &&
                   clickStartShape &&
@@ -6161,7 +6161,7 @@
               }
           }
           else {
-              this._fire(MOUSEUP, {
+              this._fire(POINTERUP, {
                   evt: evt,
                   target: this,
                   currentTarget: this,
@@ -6185,7 +6185,7 @@
               }
           }
           // content events
-          this._fire(CONTENT_MOUSEUP, { evt: evt });
+          this._fire(CONTENT_POINTERUP, { evt: evt });
           if (Konva.listenClickTap) {
               this._fire(CONTENT_CLICK, { evt: evt });
               if (fireDblClick) {
@@ -6201,7 +6201,9 @@
       };
       Stage.prototype._contextmenu = function (evt) {
           this.setPointersPositions(evt);
-          var shape = this.getIntersection(this.getPointerPosition());
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
           if (shape && shape.isListening()) {
               shape._fireAndBubble(CONTEXTMENU, { evt: evt });
           }
@@ -6241,7 +6243,7 @@
                   evt: evt,
                   target: this,
                   currentTarget: this,
-                  pointerId: this._changedPointerPositions[0].id
+                  pointerId: Util._getFirstPointerId(evt),
               });
           }
           // content event
@@ -6276,7 +6278,7 @@
                       evt: evt,
                       target: this,
                       currentTarget: this,
-                      pointerId: this._changedPointerPositions[0].id
+                      pointerId: Util._getFirstPointerId(evt),
                   });
               }
               this._fire(CONTENT_TOUCHMOVE, { evt: evt });
@@ -6341,7 +6343,7 @@
                   evt: evt,
                   target: this,
                   currentTarget: this,
-                  pointerId: this._changedPointerPositions[0].id
+                  pointerId: Util._getFirstPointerId(evt),
               });
           }
           if (Konva.listenClickTap && !tapTriggered) {
@@ -6349,7 +6351,7 @@
                   evt: evt,
                   target: this,
                   currentTarget: this,
-                  pointerId: this._changedPointerPositions[0].id
+                  pointerId: Util._getFirstPointerId(evt),
               });
           }
           if (fireDblClick && !dblTapTriggered) {
@@ -6357,7 +6359,7 @@
                   evt: evt,
                   target: this,
                   currentTarget: this,
-                  pointerId: this._changedPointerPositions[0].id
+                  pointerId: Util._getFirstPointerId(evt),
               });
           }
           // content events
@@ -6372,7 +6374,9 @@
       };
       Stage.prototype._wheel = function (evt) {
           this.setPointersPositions(evt);
-          var shape = this.getIntersection(this.getPointerPosition());
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
           if (shape && shape.isListening()) {
               shape._fireAndBubble(WHEEL, { evt: evt });
           }
@@ -6385,53 +6389,23 @@
           }
           this._fire(CONTENT_WHEEL, { evt: evt });
       };
-      Stage.prototype._pointerdown = function (evt) {
-          if (!Konva._pointerEventsEnabled) {
-              return;
-          }
-          this.setPointersPositions(evt);
-          var shape = getCapturedShape(evt.pointerId) ||
-              this.getIntersection(this.getPointerPosition());
-          if (shape) {
-              shape._fireAndBubble(POINTERDOWN, createEvent(evt));
-          }
-      };
-      Stage.prototype._pointermove = function (evt) {
-          if (!Konva._pointerEventsEnabled) {
-              return;
-          }
-          this.setPointersPositions(evt);
-          var shape = getCapturedShape(evt.pointerId) ||
-              this.getIntersection(this.getPointerPosition());
-          if (shape) {
-              shape._fireAndBubble(POINTERMOVE, createEvent(evt));
-          }
-      };
-      Stage.prototype._pointerup = function (evt) {
-          if (!Konva._pointerEventsEnabled) {
-              return;
-          }
-          this.setPointersPositions(evt);
-          var shape = getCapturedShape(evt.pointerId) ||
-              this.getIntersection(this.getPointerPosition());
-          if (shape) {
-              shape._fireAndBubble(POINTERUP, createEvent(evt));
-          }
-          releaseCapture(evt.pointerId);
-      };
       Stage.prototype._pointercancel = function (evt) {
-          if (!Konva._pointerEventsEnabled) {
-              return;
-          }
           this.setPointersPositions(evt);
-          var shape = getCapturedShape(evt.pointerId) ||
-              this.getIntersection(this.getPointerPosition());
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
           if (shape) {
-              shape._fireAndBubble(POINTERUP, createEvent(evt));
+              shape._fireAndBubble(POINTERCANCEL, { evt: evt, pointerId: pointerId });
           }
           releaseCapture(evt.pointerId);
       };
       Stage.prototype._lostpointercapture = function (evt) {
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
+          if (shape) {
+              shape._fireAndBubble(LOSTPOINTERCAPTURE, { evt: evt, pointerId: pointerId });
+          }
           releaseCapture(evt.pointerId);
       };
       /**
@@ -6456,17 +6430,17 @@
           if (evt.touches !== undefined) {
               // touchlist has not support for map method
               // so we have to iterate
-              this._pointerPositions = [];
-              this._changedPointerPositions = [];
+              this._pointerPositions.clear();
+              this._changedPointerPositions.clear();
               Collection.prototype.each.call(evt.touches, function (touch) {
-                  _this._pointerPositions.push({
+                  _this._pointerPositions.set(touch.identifier, {
                       id: touch.identifier,
                       x: touch.clientX - contentPosition.left,
                       y: touch.clientY - contentPosition.top
                   });
               });
               Collection.prototype.each.call(evt.changedTouches || evt.touches, function (touch) {
-                  _this._changedPointerPositions.push({
+                  _this._changedPointerPositions.set(touch.identifier, {
                       id: touch.identifier,
                       x: touch.clientX - contentPosition.left,
                       y: touch.clientY - contentPosition.top
@@ -6484,14 +6458,8 @@
               // mouse events
               x = evt.clientX - contentPosition.left;
               y = evt.clientY - contentPosition.top;
-              this.pointerPos = {
-                  x: x,
-                  y: y
-              };
-              this._pointerPositions = [{ x: x, y: y, id: Util._getFirstPointerId(evt) }];
-              this._changedPointerPositions = [
-                  { x: x, y: y, id: Util._getFirstPointerId(evt) }
-              ];
+              this._pointerPositions.set(evt.pointerId, { x: x, y: y, id: evt.pointerId });
+              this._changedPointerPositions.set(evt.pointerId, { x: x, y: y, id: evt.pointerId });
           }
       };
       Stage.prototype._setPointerPosition = function (evt) {
@@ -17798,4 +17766,4 @@
 
   return Konva$2;
 
-}));
+})));

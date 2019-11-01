@@ -40,6 +40,9 @@ export const DD = {
 
   // methods
   _drag(evt) {
+    if (evt.pointerId && evt.pointerType !== 'mouse') {
+      return;
+    }
     DD._dragElements.forEach((elem, key) => {
       const { node } = elem;
       // we need to find pointer relative to that node
@@ -51,9 +54,7 @@ export const DD = {
       if (elem.pointerId === undefined) {
         elem.pointerId = Util._getFirstPointerId(evt);
       }
-      const pos = stage._changedPointerPositions.find(
-        pos => pos.id === elem.pointerId
-      );
+      const pos = stage._changedPointerPositions.get(elem.pointerId);
 
       // not related pointer
       if (!pos) {
@@ -92,6 +93,9 @@ export const DD = {
   // dragBefore and dragAfter allows us to set correct order of events
   // setup all in dragbefore, and stop dragging only after pointerup triggered.
   _endDragBefore(evt?) {
+    if (evt.pointerId && evt.pointerType !== 'mouse') {
+      return;
+    }
     DD._dragElements.forEach((elem, key) => {
       const { node } = elem;
       // we need to find pointer relative to that node
@@ -100,9 +104,7 @@ export const DD = {
         stage.setPointersPositions(evt);
       }
 
-      const pos = stage._changedPointerPositions.find(
-        pos => pos.id === elem.pointerId
-      );
+      const pos = stage._changedPointerPositions.get(elem.pointerId)
 
       // that pointer is not related
       if (!pos) {
@@ -124,6 +126,9 @@ export const DD = {
     });
   },
   _endDragAfter(evt) {
+    if (evt.pointerId && evt.pointerType !== 'mouse') {
+      return;
+    }
     DD._dragElements.forEach((elem, key) => {
       if (elem.dragStatus === 'stopped') {
         elem.node.fire(
@@ -144,12 +149,12 @@ export const DD = {
 };
 
 if (Konva.isBrowser) {
-  window.addEventListener('mouseup', DD._endDragBefore, true);
+  window.addEventListener('pointerup', DD._endDragBefore, true);
   window.addEventListener('touchend', DD._endDragBefore, true);
 
-  window.addEventListener('mousemove', DD._drag);
+  window.addEventListener('pointermove', DD._drag);
   window.addEventListener('touchmove', DD._drag);
 
-  window.addEventListener('mouseup', DD._endDragAfter, false);
+  window.addEventListener('pointerup', DD._endDragAfter, false);
   window.addEventListener('touchend', DD._endDragAfter, false);
 }
