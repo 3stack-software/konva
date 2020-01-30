@@ -6269,9 +6269,14 @@
               this._pointerPositions.delete(evt.pointerId);
           }
           else {
-              this._pointerPositions.set(evt.pointerId, { x: x, y: y, id: evt.pointerId });
+              this._pointerPositions.set(evt.pointerId, {
+                  x: x, y: y, pointerId: evt.pointerId, pointerType: evt.pointerType, isPrimary: evt.isPrimary
+              });
           }
-          this._changedPointerPositions.set(evt.pointerId, { x: x, y: y, id: evt.pointerId });
+          this._changedPointerPositions.clear();
+          this._changedPointerPositions.set(evt.pointerId, {
+              x: x, y: y, pointerId: evt.pointerId, pointerType: evt.pointerType, isPrimary: evt.isPrimary
+          });
       };
       Stage.prototype._setPointerPosition = function (evt) {
           Util.warn('Method _setPointerPosition is deprecated. Use "stage.setPointersPositions(event)" instead.');

@@ -105,8 +105,8 @@ function checkNoClip(attrs: any = {}) {
 
 export class Stage extends Container<BaseLayer> {
   content: HTMLDivElement;
-  _pointerPositions: Map<number, Vector2d & { id?: number }> = new Map();
-  _changedPointerPositions: Map<number, Vector2d & { id?: number }> = new Map();
+  _pointerPositions: Map<number, Vector2d & { pointerId: number, pointerType: string, isPrimary: boolean  }> = new Map();
+  _changedPointerPositions: Map<number, Vector2d & { pointerId: number, pointerType: string, isPrimary: boolean }> = new Map();
 
   bufferCanvas: SceneCanvas;
   bufferHitCanvas: HitCanvas;
@@ -688,12 +688,18 @@ export class Stage extends Container<BaseLayer> {
 
     const x = (evt.clientX - contentPosition.left) / contentPosition.scaleX;
     const y = (evt.clientY - contentPosition.top) / contentPosition.scaleY;
+
     if (evt.pointerType !== 'mouse' && (evt.type === 'pointerup' || evt.type === 'pointercancel')) {
       this._pointerPositions.delete(evt.pointerId);
     } else {
-      this._pointerPositions.set(evt.pointerId, {x, y, id: evt.pointerId});
+      this._pointerPositions.set(evt.pointerId, {
+        x, y, pointerId: evt.pointerId, pointerType: evt.pointerType, isPrimary: evt.isPrimary
+      });
     }
-    this._changedPointerPositions.set(evt.pointerId, { x, y, id: evt.pointerId });
+    this._changedPointerPositions.clear();
+    this._changedPointerPositions.set(evt.pointerId, {
+      x, y, pointerId: evt.pointerId, pointerType: evt.pointerType, isPrimary: evt.isPrimary
+    });
   }
   _setPointerPosition(evt) {
     Util.warn(
