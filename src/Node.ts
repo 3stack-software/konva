@@ -134,8 +134,8 @@ var ABSOLUTE_OPACITY = 'absoluteOpacity',
   CHILDREN = 'children',
   KONVA = 'konva',
   LISTENING = 'listening',
-  MOUSEENTER = 'mouseenter',
-  MOUSELEAVE = 'mouseleave',
+  POINTERENTER = 'pointerenter',
+  POINTERLEAVE = 'pointerleave',
   NAME = 'name',
   SET = 'set',
   SHAPE = 'Shape',
@@ -639,15 +639,15 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return sceneCanvas;
   }
   /**
-   * bind events to the node. KonvaJS supports mouseover, mousemove,
-   *  mouseout, mouseenter, mouseleave, mousedown, mouseup, wheel, contextmenu, click, dblclick, touchstart, touchmove,
-   *  touchend, tap, dbltap, dragstart, dragmove, and dragend events.
+   * bind events to the node. KonvaJS supports pointerover, pointermove,
+   *  pointerout, pointerenter, pointerleave, pointerdown, pointerup, wheel, contextmenu, click, dblclick,
+   *  dragstart, dragmove, and dragend events.
    *  Pass in a string of events delimited by a space to bind multiple events at once
-   *  such as 'mousedown mouseup mousemove'. Include a namespace to bind an
+   *  such as 'pointerdown pointerup pointermove'. Include a namespace to bind an
    *  event by name such as 'click.foobar'.
    * @method
    * @name Konva.Node#on
-   * @param {String} evtStr e.g. 'click', 'mousedown touchstart', 'mousedown.foo touchstart.foo'
+   * @param {String} evtStr e.g. 'click', 'pointerdown pointerup', 'pointerdown.foo touchstart.foo'
    * @param {Function} handler The handler function is passed an event object
    * @returns {Konva.Node}
    * @example
@@ -716,7 +716,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
     /*
      * loop through types and attach event listeners to
-     * each one.  eg. 'click mouseover.namespace mouseout'
+     * each one.  eg. 'click pointerover.namespace pointerout'
      * will create three event bindings
      */
     for (n = 0; n < len; n++) {
@@ -741,13 +741,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   /**
    * remove event bindings from the node. Pass in a string of
    *  event types delimmited by a space to remove multiple event
-   *  bindings at once such as 'mousedown mouseup mousemove'.
+   *  bindings at once such as 'pointerdown pointerup pointermove'.
    *  include a namespace to remove an event binding by name
    *  such as 'click.foobar'. If you only give a name like '.foobar',
    *  all events in that namespace will be removed.
    * @method
    * @name Konva.Node#off
-   * @param {String} evtStr e.g. 'click', 'mousedown touchstart', '.foobar'
+   * @param {String} evtStr e.g. 'click', 'pointerdown touchstart', '.foobar'
    * @returns {Konva.Node}
    * @example
    * // remove listener
@@ -1623,7 +1623,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * fire event
    * @method
    * @name Konva.Node#fire
-   * @param {String} eventType event type.  can be a regular event, like click, mouseover, or mouseout, or it can be a custom event, like myCustomEvent
+   * @param {String} eventType event type.  can be a regular event, like click, pointerover, or pointerout, or it can be a custom event, like myCustomEvent
    * @param {Event} [evt] event object
    * @param {Boolean} [bubble] setting the value to false, or leaving it undefined, will result in the event
    *  not bubbling.  Setting the value to true will result in the event bubbling.
@@ -1675,7 +1675,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
   }
   _getAbsoluteTransform(top?: Node) {
-    
+
     var at;
     // we we need position relative to an ancestor, we will iterate for all
     if (top) {
@@ -2208,7 +2208,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
 
     var shouldStop =
-      (eventType === MOUSEENTER || eventType === MOUSELEAVE) &&
+      (eventType === POINTERENTER || eventType === POINTERLEAVE) &&
       ((compareShape &&
         (this === compareShape ||
           (this.isAncestorOf && this.isAncestorOf(compareShape)))) ||
@@ -2219,7 +2219,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
       // simulate event bubbling
       var stopBubble =
-        (eventType === MOUSEENTER || eventType === MOUSELEAVE) &&
+        (eventType === POINTERENTER || eventType === POINTERLEAVE) &&
         (compareShape &&
           compareShape.isAncestorOf &&
           compareShape.isAncestorOf(this) &&
@@ -2276,7 +2276,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     var ap = this.getAbsolutePosition();
     var pos =
       stage._getPointerById(pointerId) ||
-      stage._changedPointerPositions[0] ||
       ap;
     DD._dragElements.set(this._id, {
       node: this,
@@ -2386,10 +2385,10 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   _listenDrag() {
     this._dragCleanup();
 
-    this.on('mousedown.konva touchstart.konva', function(evt) {
-      var shouldCheckButton = evt.evt['button'] !== undefined;
+    this.on('pointerdown.konva', function(evt) {
+      var shouldCheckButton = evt.evt.pointerType === 'mouse';
       var canDrag =
-        !shouldCheckButton || Konva.dragButtons.indexOf(evt.evt['button']) >= 0;
+        !shouldCheckButton || Konva.dragButtons.indexOf(evt.evt.button) >= 0;
       if (!canDrag) {
         return;
       }
@@ -2431,8 +2430,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   }
 
   _dragCleanup() {
-    this.off('mousedown.konva');
-    this.off('touchstart.konva');
+    this.off('pointerdown.konva');
   }
 
   preventDefault: GetSet<boolean, this>;

@@ -184,6 +184,7 @@ export class Transformer extends Group {
   _node: Node;
   _movingAnchorName: string;
   _transforming = false;
+  _movingPointerId: number;
   sin: number;
   cos: number;
   _cursorChange: boolean;
@@ -194,8 +195,8 @@ export class Transformer extends Group {
     this._createElements();
 
     // bindings
-    this._handleMouseMove = this._handleMouseMove.bind(this);
-    this._handleMouseUp = this._handleMouseUp.bind(this);
+    this._handlePointerMove = this._handlePointerMove.bind(this);
+    this._handlePointerUp = this._handlePointerUp.bind(this);
     this.update = this.update.bind(this);
 
     // update transformer data for certain attr changes
@@ -345,8 +346,8 @@ export class Transformer extends Group {
       hitStrokeWidth: TOUCH_DEVICE ? 10 : 'auto'
     });
     var self = this;
-    anchor.on('mousedown touchstart', function(e) {
-      self._handleMouseDown(e);
+    anchor.on('pointerdown', function(e) {
+      self._handlePointerDown(e);
     });
     anchor.on('dragstart', function(e) {
       e.cancelBubble = true;
@@ -359,7 +360,7 @@ export class Transformer extends Group {
     });
 
     // add hover styling
-    anchor.on('mouseenter', () => {
+    anchor.on('pointerenter', () => {
       var rad = Konva.getAngle(this.rotation());
 
       var scale = this.getNode().getAbsoluteScale();
@@ -369,7 +370,7 @@ export class Transformer extends Group {
       anchor.getStage().content.style.cursor = cursor;
       this._cursorChange = true;
     });
-    anchor.on('mouseout', () => {
+    anchor.on('pointerout', () => {
       if (!anchor.getStage() || !anchor.getParent()) {
         return;
       }
@@ -407,7 +408,8 @@ export class Transformer extends Group {
     });
     this.add(back);
   }
-  _handleMouseDown(e) {
+  _handlePointerDown(e) {
+    this._movingPointerId = e.pointerId;
     this._movingAnchorName = e.target.name().split(' ')[0];
 
     // var node = this.getNode();
@@ -419,17 +421,19 @@ export class Transformer extends Group {
     this.sin = Math.abs(height / hypotenuse);
     this.cos = Math.abs(width / hypotenuse);
 
-    window.addEventListener('mousemove', this._handleMouseMove);
-    window.addEventListener('touchmove', this._handleMouseMove);
-    window.addEventListener('mouseup', this._handleMouseUp, true);
-    window.addEventListener('touchend', this._handleMouseUp, true);
+    window.addEventListener('pointermove', this._handlePointerMove);
+    window.addEventListener('pointerup', this._handlePointerUp, true);
+    window.addEventListener('pointercancel', this._handlePointerUp, true);
 
     this._transforming = true;
 
     this._fire('transformstart', { evt: e });
     this.getNode()._fire('transformstart', { evt: e });
   }
-  _handleMouseMove(e) {
+  _handlePointerMove(e) {
+    if (e.pointerId !== this._movingPointerId) {
+      return;
+    }
     var x, y, newHypotenuse;
     var anchorNode = this.findOne('.' + this._movingAnchorName);
     var stage = anchorNode.getStage();
@@ -440,8 +444,8 @@ export class Transformer extends Group {
       y: box.top
     };
     var pointerPos = {
-      left: e.clientX !== undefined ? e.clientX : e.touches[0].clientX,
-      top: e.clientX !== undefined ? e.clientY : e.touches[0].clientY
+      left: e.clientX,
+      top: e.clientY,
     };
     var newAbsPos = {
       x: pointerPos.left - zeroPoint.x,
@@ -703,16 +707,18 @@ export class Transformer extends Group {
       e
     );
   }
-  _handleMouseUp(e) {
+  _handlePointerUp(e) {
+    if (e.pointerId !== this._movingPointerId) {
+      return;
+    }
     this._removeEvents(e);
   }
   _removeEvents(e?) {
     if (this._transforming) {
       this._transforming = false;
-      window.removeEventListener('mousemove', this._handleMouseMove);
-      window.removeEventListener('touchmove', this._handleMouseMove);
-      window.removeEventListener('mouseup', this._handleMouseUp, true);
-      window.removeEventListener('touchend', this._handleMouseUp, true);
+      window.removeEventListener('pointermove', this._handlePointerMove);
+      window.removeEventListener('pointerup', this._handlePointerUp, true);
+      window.removeEventListener('pointercancel', this._handlePointerUp, true);
       this._fire('transformend', { evt: e });
       var node = this.getNode();
       if (node) {

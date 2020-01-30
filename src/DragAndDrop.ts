@@ -51,9 +51,7 @@ export const DD = {
       if (elem.pointerId === undefined) {
         elem.pointerId = Util._getFirstPointerId(evt);
       }
-      const pos = stage._changedPointerPositions.find(
-        pos => pos.id === elem.pointerId
-      );
+      const pos = stage._changedPointerPositions.get(elem.pointerId);
 
       // not related pointer
       if (!pos) {
@@ -100,9 +98,7 @@ export const DD = {
         stage.setPointersPositions(evt);
       }
 
-      const pos = stage._changedPointerPositions.find(
-        pos => pos.id === elem.pointerId
-      );
+      const pos = stage._changedPointerPositions.get(elem.pointerId);
 
       // that pointer is not related
       if (!pos) {
@@ -145,12 +141,8 @@ export const DD = {
 };
 
 if (Konva.isBrowser) {
-  window.addEventListener('mouseup', DD._endDragBefore, true);
-  window.addEventListener('touchend', DD._endDragBefore, true);
-
-  window.addEventListener('mousemove', DD._drag);
-  window.addEventListener('touchmove', DD._drag);
-
-  window.addEventListener('mouseup', DD._endDragAfter, false);
-  window.addEventListener('touchend', DD._endDragAfter, false);
+  window.addEventListener('pointerup', DD._endDragBefore, true);
+  window.addEventListener('pointermove', DD._drag);
+  window.addEventListener('pointerup', DD._endDragAfter, false);
+  window.addEventListener('pointercancel', DD._endDragAfter, false);
 }
