@@ -8,7 +8,7 @@
    * Konva JavaScript Framework v4.1.2
    * http://konvajs.org/
    * Licensed under the MIT
-   * Date: Fri Jan 31 2020
+   * Date: Mon Feb 17 2020
    *
    * Original work Copyright (C) 2011 - 2013 by Eric Rowell (KineticJS)
    * Modified work Copyright (C) 2014 - present by Anton Lavrenov (Konva)
@@ -47,7 +47,7 @@
       return false;
   };
   var _parseUA = function (userAgent) {
-      var ua = userAgent.toLowerCase(), 
+      var ua = userAgent.toLowerCase(),
       // jQuery UA regex
       match = /(chrome)[ /]([\w.]+)/.exec(ua) ||
           /(webkit)[ /]([\w.]+)/.exec(ua) ||
@@ -55,7 +55,7 @@
           /(msie) ([\w.]+)/.exec(ua) ||
           (ua.indexOf('compatible') < 0 &&
               /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua)) ||
-          [], 
+          [],
       // adding mobile flag as well
       mobile = !!userAgent.match(/Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile/i), ieMobile = !!userAgent.match(/IEMobile/i);
       return {
@@ -1436,9 +1436,9 @@
       return r;
   }
 
-  var COMMA = ',', OPEN_PAREN = '(', CLOSE_PAREN = ')', OPEN_PAREN_BRACKET = '([', CLOSE_BRACKET_PAREN = '])', SEMICOLON = ';', DOUBLE_PAREN = '()', 
+  var COMMA = ',', OPEN_PAREN = '(', CLOSE_PAREN = ')', OPEN_PAREN_BRACKET = '([', CLOSE_BRACKET_PAREN = '])', SEMICOLON = ';', DOUBLE_PAREN = '()',
   // EMPTY_STRING = '',
-  EQUALS = '=', 
+  EQUALS = '=',
   // SET = 'set',
   CONTEXT_METHODS = [
       'arc',
@@ -2123,7 +2123,7 @@
           }
       };
       SceneContext.prototype._stroke = function (shape) {
-          var dash = shape.dash(), 
+          var dash = shape.dash(),
           // ignore strokeScaleEnabled for Text
           strokeScaleEnabled = shape.getStrokeScaleEnabled();
           if (shape.hasStroke()) {
@@ -3246,7 +3246,7 @@
          * T         | I         | T
          * F         | I         | F
          * I         | I         | T
-    
+
           * @method
           * @name Konva.Node#isVisible
           * @returns {Boolean}
@@ -5713,7 +5713,7 @@
   }
 
   // CONSTANTS
-  var STAGE$1 = 'Stage', STRING = 'string', PX = 'px', POINTEROUT = 'pointerout', POINTERLEAVE$1 = 'pointerleave', POINTEROVER = 'pointerover', POINTERENTER$1 = 'pointerenter', POINTERMOVE = 'pointermove', POINTERDOWN = 'pointerdown', POINTERUP = 'pointerup', POINTERCANCEL = 'pointercancel', LOSTPOINTERCAPTURE = 'lostpointercapture', CONTEXTMENU = 'contextmenu', CLICK = 'click', DBL_CLICK = 'dblclick', WHEEL = 'wheel', CONTENT_POINTEROUT = 'contentPointerout', CONTENT_POINTEROVER = 'contentPointerover', CONTENT_POINTERMOVE = 'contentPointermove', CONTENT_POINTERDOWN = 'contentPointerdown', CONTENT_POINTERUP = 'contentPointerup', CONTENT_CONTEXTMENU = 'contentContextmenu', CONTENT_CLICK = 'contentClick', CONTENT_DBL_CLICK = 'contentDblclick', CONTENT_WHEEL = 'contentWheel', RELATIVE = 'relative', KONVA_CONTENT = 'konvajs-content', UNDERSCORE = '_', CONTAINER = 'container', MAX_LAYERS_NUMBER = 5, EMPTY_STRING$1 = '', EVENTS = [
+  var STAGE$1 = 'Stage', STRING = 'string', PX = 'px', POINTEROUT = 'pointerout', POINTERLEAVE$1 = 'pointerleave', POINTEROVER = 'pointerover', POINTERENTER$1 = 'pointerenter', POINTERMOVE = 'pointermove', POINTERDOWN = 'pointerdown', POINTERUP = 'pointerup', POINTERCANCEL = 'pointercancel', LOSTPOINTERCAPTURE = 'lostpointercapture', CONTEXTMENU = 'contextmenu', CLICK = 'click', DBL_CLICK = 'dblclick', WHEEL = 'wheel', CONTENT_POINTEROUT = 'contentPointerout', CONTENT_POINTEROVER = 'contentPointerover', CONTENT_POINTERMOVE = 'contentPointermove', CONTENT_POINTERDOWN = 'contentPointerdown', CONTENT_POINTERUP = 'contentPointerup', CONTENT_POINTERCANCEL = 'contentPointercancel', CONTENT_LOSTPOINTERCAPTURE = 'contentLostpointercapture', CONTENT_CONTEXTMENU = 'contentContextmenu', CONTENT_CLICK = 'contentClick', CONTENT_DBL_CLICK = 'contentDblclick', CONTENT_WHEEL = 'contentWheel', RELATIVE = 'relative', KONVA_CONTENT = 'konvajs-content', UNDERSCORE = '_', CONTAINER = 'container', MAX_LAYERS_NUMBER = 5, EMPTY_STRING$1 = '', EVENTS = [
       POINTERENTER$1,
       POINTERDOWN,
       POINTERMOVE,
@@ -5724,7 +5724,7 @@
       CONTEXTMENU,
       POINTERCANCEL,
       LOSTPOINTERCAPTURE
-  ], 
+  ],
   // cached variables
   eventsLength = EVENTS.length;
   function addEvent(ctx, eventName) {
@@ -6234,6 +6234,7 @@
               shape._fireAndBubble(POINTERCANCEL, { evt: evt, pointerId: pointerId });
           }
           releaseCapture(evt.pointerId);
+          this._fire(CONTENT_POINTERCANCEL, { evt: evt });
       };
       Stage.prototype._lostpointercapture = function (evt) {
           var pointerId = evt.pointerId;
@@ -6243,6 +6244,7 @@
               shape._fireAndBubble(LOSTPOINTERCAPTURE, { evt: evt, pointerId: pointerId });
           }
           releaseCapture(evt.pointerId);
+          this._fire(CONTENT_LOSTPOINTERCAPTURE, { evt: evt });
       };
       /**
        * manually register pointers positions (mouse/touch) in the stage.
@@ -6729,8 +6731,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -6747,8 +6749,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -8269,7 +8271,7 @@
   Collection.mapMethods(Shape);
 
   // constants
-  var HASH$1 = '#', BEFORE_DRAW = 'beforeDraw', DRAW = 'draw', 
+  var HASH$1 = '#', BEFORE_DRAW = 'beforeDraw', DRAW = 'draw',
   /*
    * 2 - 3 - 4
    * |       |
@@ -9592,8 +9594,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -9610,8 +9612,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -9781,8 +9783,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -9799,8 +9801,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -10075,8 +10077,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -10093,8 +10095,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -10292,8 +10294,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -10310,8 +10312,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -10429,8 +10431,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -10447,8 +10449,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -10603,8 +10605,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -10621,8 +10623,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -10874,7 +10876,7 @@
       'lineHeight',
       'text',
       'width'
-  ], CHANGE_KONVA = 'Change.konva', NONE = 'none', UP = 'up', RIGHT = 'right', DOWN = 'down', LEFT = 'left', 
+  ], CHANGE_KONVA = 'Change.konva', NONE = 'none', UP = 'up', RIGHT = 'right', DOWN = 'down', LEFT = 'left',
   // cached variables
   attrChangeListLen = ATTR_CHANGE_LIST.length;
   /**
@@ -11182,8 +11184,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -11200,8 +11202,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -11966,8 +11968,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -11984,8 +11986,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -12118,8 +12120,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -12136,8 +12138,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -12276,8 +12278,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -12294,8 +12296,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -12429,8 +12431,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -12447,8 +12449,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -12796,8 +12798,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -12814,8 +12816,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -12956,7 +12958,7 @@
   Collection.mapMethods(Star);
 
   // constants
-  var AUTO = 'auto', 
+  var AUTO = 'auto',
   //CANVAS = 'canvas',
   CENTER = 'center', JUSTIFY = 'justify', CHANGE_KONVA$1 = 'Change.konva', CONTEXT_2D = '2d', DASH = '-', LEFT$1 = 'left', TEXT = 'text', TEXT_UPPER = 'Text', TOP = 'top', BOTTOM = 'bottom', MIDDLE = 'middle', NORMAL = 'normal', PX_SPACE = 'px ', SPACE$1 = ' ', RIGHT$1 = 'right', WORD = 'word', CHAR = 'char', NONE$1 = 'none', ELLIPSIS = '…', ATTR_CHANGE_LIST$1 = [
       'fontFamily',
@@ -12973,7 +12975,7 @@
       'wrap',
       'ellipsis',
       'letterSpacing'
-  ], 
+  ],
   // cached variables
   attrChangeListLen$1 = ATTR_CHANGE_LIST$1.length;
   var dummyContext$1;
@@ -13023,8 +13025,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -13041,8 +13043,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -13299,7 +13301,7 @@
               (length ? letterSpacing * (length - 1) : 0));
       };
       Text.prototype._setTextData = function () {
-          var lines = this.text().split('\n'), fontSize = +this.fontSize(), textWidth = 0, lineHeightPx = this.lineHeight() * fontSize, width = this.attrs.width, height = this.attrs.height, fixedWidth = width !== AUTO && width !== undefined, fixedHeight = height !== AUTO && height !== undefined, padding = this.padding(), maxWidth = width - padding * 2, maxHeightPx = height - padding * 2, currentHeightPx = 0, wrap = this.wrap(), 
+          var lines = this.text().split('\n'), fontSize = +this.fontSize(), textWidth = 0, lineHeightPx = this.lineHeight() * fontSize, width = this.attrs.width, height = this.attrs.height, fixedWidth = width !== AUTO && width !== undefined, fixedHeight = height !== AUTO && height !== undefined, padding = this.padding(), maxWidth = width - padding * 2, maxHeightPx = height - padding * 2, currentHeightPx = 0, wrap = this.wrap(),
           // align = this.align(),
           shouldWrap = wrap !== NONE$1, wrapAtWord = wrap !== CHAR && shouldWrap, shouldAddEllipsis = this.ellipsis() && !shouldWrap;
           this.textArr = [];
@@ -13680,8 +13682,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -13698,8 +13700,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -13777,7 +13779,7 @@
   var TextPath = /** @class */ (function (_super) {
       __extends(TextPath, _super);
       function TextPath(config) {
-          var _this = 
+          var _this =
           // call super constructor
           _super.call(this, config) || this;
           _this.dummyCanvas = Util.createCanvasElement();
@@ -14441,7 +14443,7 @@
   var Transformer = /** @class */ (function (_super) {
       __extends(Transformer, _super);
       function Transformer(config) {
-          var _this = 
+          var _this =
           // call super constructor
           _super.call(this, config) || this;
           _this._transforming = false;
@@ -15363,8 +15365,8 @@
      * @param {Number} [config.fillPatternX]
      * @param {Number} [config.fillPatternY]
      * @param {Object} [config.fillPatternOffset] object with x and y component
-     * @param {Number} [config.fillPatternOffsetX] 
-     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Number} [config.fillPatternOffsetX]
+     * @param {Number} [config.fillPatternOffsetY]
      * @param {Object} [config.fillPatternScale] object with x and y component
      * @param {Number} [config.fillPatternScaleX]
      * @param {Number} [config.fillPatternScaleY]
@@ -15381,8 +15383,8 @@
      * @param {Number} [config.fillRadialGradientStartPointX]
      * @param {Number} [config.fillRadialGradientStartPointY]
      * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
-     * @param {Number} [config.fillRadialGradientEndPointX] 
-     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientEndPointX]
+     * @param {Number} [config.fillRadialGradientEndPointY]
      * @param {Number} [config.fillRadialGradientStartRadius]
      * @param {Number} [config.fillRadialGradientEndRadius]
      * @param {Array} [config.fillRadialGradientColorStops] array of color stops
@@ -17214,7 +17216,7 @@
    * node.pixelSize(10);
    */
   var Pixelate = function (imageData) {
-      var pixelSize = Math.ceil(this.pixelSize()), width = imageData.width, height = imageData.height, x, y, i, 
+      var pixelSize = Math.ceil(this.pixelSize()), width = imageData.width, height = imageData.height, x, y, i,
       //pixelsPerBin = pixelSize * pixelSize,
       red, green, blue, alpha, nBinsX = Math.ceil(width / pixelSize), nBinsY = Math.ceil(height / pixelSize), xBinStart, xBinEnd, yBinStart, yBinEnd, xBin, yBin, pixelsInBin, data = imageData.data;
       if (pixelSize <= 0) {

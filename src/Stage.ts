@@ -653,6 +653,8 @@ export class Stage extends Container<BaseLayer> {
     }
 
     PointerEvents.releaseCapture(evt.pointerId);
+
+    this._fire(CONTENT_POINTERCANCEL, { evt: evt });
   }
 
   _lostpointercapture(evt: PointerEvent) {
@@ -664,6 +666,8 @@ export class Stage extends Container<BaseLayer> {
       shape._fireAndBubble(LOSTPOINTERCAPTURE, { evt: evt, pointerId });
     }
     PointerEvents.releaseCapture(evt.pointerId);
+
+    this._fire(CONTENT_LOSTPOINTERCAPTURE, { evt: evt });
   }
 
   /**
