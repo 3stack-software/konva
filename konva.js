@@ -2424,6 +2424,9 @@
       // setup all in dragbefore, and stop dragging only after pointerup triggered.
       _endDragBefore: function (evt) {
           DD._dragElements.forEach(function (elem, key) {
+              if (elem.dragStatus === 'ready') {
+                  return;
+              }
               var node = elem.node;
               // we need to find pointer relative to that node
               var stage = node.getStage();
@@ -2436,7 +2439,7 @@
                   return;
               }
               if (elem.dragStatus === 'dragging' || elem.dragStatus === 'stopped') {
-                  // if a node is stopped manully we still need to reset events:
+                  // if a node is stopped manually we still need to reset events:
                   DD.justDragged = true;
                   Konva.listenClickTap = false;
                   elem.dragStatus = 'stopped';
