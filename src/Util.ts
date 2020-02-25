@@ -1071,6 +1071,9 @@ export const Util = {
     return target as T & U;
   },
   _getFirstPointerId(evt) {
+    if (evt.pointerId) {
+      return evt.pointerId;
+    }
     if (!evt.touches) {
       // fake id for mouse
       return 999;
