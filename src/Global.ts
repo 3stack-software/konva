@@ -91,6 +91,9 @@ export const Konva = {
   version: '@@version',
   isBrowser: detectBrowser(),
   isUnminified: /param/.test(function(param) {}.toString()),
+  pressWindow: 501,
+  clickDistance: 9,
+  clickWindow: 250,
   dblClickWindow: 400,
   getAngle(angle) {
     return Konva.angleDeg ? angle * PI_OVER_180 : angle;
@@ -123,7 +126,7 @@ export const Konva = {
   captureTouchEventsEnabled: false,
 
   // TODO: move that to stage?
-  listenClickTap: false,
+  listenClickTap: null,
   inDblClickWindow: false,
 
   /**

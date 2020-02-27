@@ -29,6 +29,7 @@ var STAGE = 'Stage',
   LOSTPOINTERCAPTURE = 'lostpointercapture',
   CONTEXTMENU = 'contextmenu',
   CLICK = 'click',
+  PRESS = 'press',
   DBL_CLICK = 'dblclick',
   WHEEL = 'wheel',
   CONTENT_POINTEROUT = 'contentPointerout',
@@ -113,8 +114,8 @@ export class Stage extends Container<BaseLayer> {
   targetShape: Shape | Stage;
   clickStartShape: Shape | Stage;
   clickEndShape: Shape | Stage;
+  pressTimeout: any;
   dblTimeout: any;
-  tapStartShape: Shape | Stage;
 
   constructor(config: StageConfig) {
     super(checkNoClip(config));
@@ -427,6 +428,11 @@ export class Stage extends Container<BaseLayer> {
     this.setPointersPositions(evt);
     var pointerId = evt.pointerId;
 
+    if (Konva.listenClickTap != null && Konva.listenClickTap.pointerId === pointerId) {
+      Konva.listenClickTap.x += Math.abs(evt.movementX);
+      Konva.listenClickTap.y += Math.abs(evt.movementY);
+    }
+
     var eventsEnabled = !DD.isDragging || Konva.hitOnDragEnabled;
     if (eventsEnabled) {
       const shape = PointerEvents.getCapturedShape(pointerId)
@@ -502,7 +508,39 @@ export class Stage extends Container<BaseLayer> {
       || this.getIntersection(this._getPointerById(pointerId));
 
     DD.justDragged = false;
-    Konva.listenClickTap = true;
+    if (evt.isPrimary && (evt.pointerType !== 'mouse' || evt.button === 0)) {
+      Konva.listenClickTap = { pointerId, x: 0, y: 0, at: Date.now() };
+    } else {
+      Konva.listenClickTap = null;
+    }
+
+    clearTimeout(this.pressTimeout);
+    if (evt.isPrimary && evt.pointerType !== 'mouse') {
+      this.pressTimeout = setTimeout(() => {
+        const firePress = Konva.listenClickTap != null &&
+            Math.hypot(Konva.listenClickTap.x, Konva.listenClickTap.y) <= Konva.clickDistance &&
+            !DD.isDragging;
+        if (!firePress) {
+          return;
+        }
+        // clear click & double click
+        Konva.listenClickTap = null;
+        clearTimeout(this.dblTimeout);
+        // send press event
+        const pressShape = this.clickStartShape;
+        if (pressShape != null && pressShape.isListening()) {
+          pressShape._fireAndBubble(PRESS, { evt: evt, pointerId });
+        } else {
+          this._fire(PRESS, {
+            evt: evt,
+            target: this,
+            currentTarget: this,
+            pointerId
+          });
+        }
+      }, Konva.pressWindow);
+    }
+
 
     if (shape && shape.isListening()) {
       this.clickStartShape = shape;
@@ -535,14 +573,27 @@ export class Stage extends Container<BaseLayer> {
       clickEndShape = this.clickEndShape,
       fireDblClick = false;
 
-    if (Konva.inDblClickWindow) {
-      fireDblClick = true;
-      clearTimeout(this.dblTimeout);
-      // Konva.inDblClickWindow = false;
-    } else if (!DD.justDragged) {
-      // don't set inDblClickWindow after dragging
-      Konva.inDblClickWindow = true;
-      clearTimeout(this.dblTimeout);
+    const fireClick = Konva.listenClickTap != null &&
+        Konva.listenClickTap.pointerId === pointerId &&
+        Math.hypot(Konva.listenClickTap.x, Konva.listenClickTap.y) <= Konva.clickDistance &&
+        (
+          // ignore click-window for mice
+          (evt.pointerType === 'mouse' && evt.button === 0) ||
+          (evt.pointerType !== 'mouse' && Date.now() < Konva.listenClickTap.at + Konva.clickWindow)
+        );
+    Konva.listenClickTap = null;
+
+    clearTimeout(this.pressTimeout);
+    if (fireClick) {
+      if (Konva.inDblClickWindow) {
+        fireDblClick = true;
+        clearTimeout(this.dblTimeout);
+        // Konva.inDblClickWindow = false;
+      } else if (!DD.justDragged) {
+        // don't set inDblClickWindow after dragging
+        Konva.inDblClickWindow = true;
+        clearTimeout(this.dblTimeout);
+      }
     }
 
     this.dblTimeout = setTimeout(function() {
@@ -555,7 +606,7 @@ export class Stage extends Container<BaseLayer> {
 
       // detect if click or double click occurred
       if (
-        Konva.listenClickTap &&
+        fireClick &&
         clickStartShape &&
         clickStartShape._id === shape._id
       ) {
@@ -572,7 +623,7 @@ export class Stage extends Container<BaseLayer> {
         currentTarget: this,
         pointerId
       });
-      if (Konva.listenClickTap) {
+      if (fireClick) {
         this._fire(CLICK, {
           evt: evt,
           target: this,
@@ -580,7 +631,6 @@ export class Stage extends Container<BaseLayer> {
           pointerId
         });
       }
-
       if (fireDblClick) {
         this._fire(DBL_CLICK, {
           evt: evt,
@@ -592,14 +642,12 @@ export class Stage extends Container<BaseLayer> {
     }
     // content events
     this._fire(CONTENT_POINTERUP, { evt: evt });
-    if (Konva.listenClickTap) {
+    if (fireClick) {
       this._fire(CONTENT_CLICK, { evt: evt });
       if (fireDblClick) {
         this._fire(CONTENT_DBL_CLICK, { evt: evt });
       }
     }
-
-    Konva.listenClickTap = false;
 
     // always call preventDefault for desktop events because some browsers
     // try to drag and drop the canvas element
