@@ -14,6 +14,7 @@ import { Path } from './shapes/Path';
 import { Rect } from './shapes/Rect';
 import { RegularPolygon } from './shapes/RegularPolygon';
 import { Ring } from './shapes/Ring';
+import { Shape2D } from './shapes/Shape2D';
 import { Sprite } from './shapes/Sprite';
 import { Star } from './shapes/Star';
 import { Text } from './shapes/Text';
@@ -55,6 +56,7 @@ export const Konva = Core.Util._assign(Core, {
   Rect,
   RegularPolygon,
   Ring,
+  Shape2D,
   Sprite,
   Star,
   Text,
