@@ -200,6 +200,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   index = 0;
   parent: Container<Node> | null = null;
   _cache: Map<string, any> = new Map<string, any>();
+  _at: Transform = new Transform();
   _lastPos: Point = null;
   _attrsAffectingSize!: string[];
 
@@ -1697,12 +1698,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       }, top);
       return at;
     } else {
+      at = this._at;
       // try to use a cached value
       if (this.parent) {
         // transform will be cached
-        at = this.parent.getAbsoluteTransform().copy();
+        at.copyFrom(this.parent.getAbsoluteTransform());
       } else {
-        at = new Transform();
+        at.reset();
       }
       var transformsEnabled = this.transformsEnabled();
       if (transformsEnabled === 'all') {

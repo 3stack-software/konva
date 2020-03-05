@@ -157,6 +157,35 @@ export class Transform {
     return new Transform(this.m);
   }
   /**
+   * Copy Konva.Transform object
+   * @method
+   * @name Konva.Transform#copyFrom
+   * @example
+   */
+  copyFrom(other) {
+    const [a, b, c, d, e, f] = other.m;
+    this.m[0] = a;
+    this.m[1] = b;
+    this.m[2] = c;
+    this.m[3] = d;
+    this.m[4] = e;
+    this.m[5] = f;
+  }
+  /**
+   * Copy Konva.Transform object
+   * @method
+   * @name Konva.Transform#reset
+   * @example
+   */
+  reset() {
+    this.m[0] = 1;
+    this.m[1] = 0;
+    this.m[2] = 0;
+    this.m[3] = 1;
+    this.m[4] = 0;
+    this.m[5] = 0;
+  }
+  /**
    * Transform point
    * @method
    * @name Konva.Transform#point
