@@ -93,6 +93,9 @@ export const DD = {
   // setup all in dragbefore, and stop dragging only after pointerup triggered.
   _endDragBefore(evt?) {
     DD._dragElements.forEach((elem, key) => {
+      if (elem.dragStatus === 'ready') {
+        return;
+      }
       const { node } = elem;
       // we need to find pointer relative to that node
       const stage = node.getStage();
