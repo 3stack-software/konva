@@ -129,8 +129,8 @@ export class Layer extends BaseLayer {
       shape;
     // fully opaque pixel
     if (p3 === 255) {
-      colorKey = Util._rgbToHex(p[0], p[1], p[2]);
-      shape = shapes[HASH + colorKey];
+      colorKey = Util._rgbTo24bit(p[0], p[1], p[2]);
+      shape = shapes.get(colorKey);
       if (shape) {
         return {
           shape: shape

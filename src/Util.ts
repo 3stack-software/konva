@@ -625,6 +625,15 @@ export const Util = {
       b: bigint & 255
     };
   },
+  _24bitToHex(rgb) {
+    return HASH + ((1 << 24) + rgb).toString(16).slice(1);
+  },
+  _rgbTo24bit(r, g, b) {
+    return (r << 16) + (g << 8) + b;
+  },
+  getRandom24bit() {
+    return Math.floor(Math.random() * 0xffffff);
+  },
   /**
    * return random hex color
    * @method

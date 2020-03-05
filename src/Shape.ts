@@ -90,7 +90,7 @@ function getDummyContext(): CanvasRenderingContext2D {
   return dummyContext;
 }
 
-export const shapes = {};
+export const shapes: Map<number, Node> = new Map();
 
 // TODO: idea - use only "remove" (or destroy method)
 // how? on add, check that every inner shape has reference in konva store with color
@@ -161,6 +161,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   Config
 > {
   _centroid: boolean;
+  colorId: number;
   colorKey: string;
 
   _fillFunc: (ctx: Context) => void;
@@ -171,17 +172,16 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   constructor(config?: Config) {
     super(config);
     // set colorKey
-    var key;
-
+    let colorId;
     while (true) {
-      key = Util.getRandomColor();
-      if (key && !(key in shapes)) {
+      colorId = Util.getRandom24bit();
+      if (!shapes.has(colorId)) {
         break;
       }
     }
-
-    this.colorKey = key;
-    shapes[key] = this;
+    this.colorId = colorId;
+    this.colorKey = Util._24bitToHex(colorId);
+    shapes.set(colorId, this);
 
     this.on(
       'shadowColorChange.konva shadowBlurChange.konva shadowOffsetChange.konva shadowOpacityChange.konva shadowEnabledChange.konva',
@@ -411,8 +411,9 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
 
   destroy() {
     Node.prototype.destroy.call(this);
-    delete shapes[this.colorKey];
-    delete this.colorKey;
+    shapes.delete(this.colorId);
+    this.colorId = null;
+    this.colorKey = null;
     return this;
   }
   // why do we need buffer canvas?
@@ -646,7 +647,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       cachedCanvas = this._getCanvasCache(),
       cachedHitCanvas = cachedCanvas && cachedCanvas.hit;
 
-    if (!this.colorKey) {
+    if (this.colorKey == null) {
       console.log(this);
       Util.warn(
         'Looks like your canvas has a destroyed shape in it. Do not reuse shape after you destroyed it. See the shape in logs above. If you want to reuse shape you should call remove() instead of destroy()'
