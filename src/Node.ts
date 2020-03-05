@@ -2083,8 +2083,16 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return this;
   }
   setName(name) {
-    var oldNames = (this.name() || '').split(/\s/g);
-    var newNames = (name || '').split(/\s/g);
+    const oldName = this.name() || '';
+    const newName = name || '';
+    if (oldName.indexOf(SPACE) < 0 && newName.indexOf(SPACE) < 0 && oldName !== newName) {
+      _removeName(oldName, this._id);
+      _addName(this, newName);
+      this._setAttr(NAME, name);
+      return this;
+    }
+    var oldNames = oldName.split(/\s/g);
+    var newNames = newName.split(/\s/g);
     var subname, i;
     // remove all subnames
     for (i = 0; i < oldNames.length; i++) {
