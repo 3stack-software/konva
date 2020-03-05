@@ -56,6 +56,7 @@ export interface ShapeConfig extends NodeConfig {
   strokeScaleEnabled?: boolean;
   strokeHitEnabled?: boolean;
   strokeEnabled?: boolean;
+  miterLimit?: number;
   lineJoin?: string;
   lineCap?: string;
   sceneFunc?: (con: Context, shape: Shape) => void;
@@ -545,6 +546,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       bufferContext = bufferCanvas.getContext();
       bufferContext.clear();
       bufferContext.save();
+      bufferContext._applyMiterLimit(this);
       bufferContext._applyLineJoin(this);
       // layer might be undefined if we are using cache before adding to layer
       if (!caching) {
@@ -587,6 +589,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       }
     } else {
       // if buffer canvas is not needed
+      context._applyMiterLimit(this);
       context._applyLineJoin(this);
       // layer might be undefined if we are using cache before adding to layer
       if (!caching) {
@@ -664,6 +667,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
       return this;
     }
     context.save();
+    context._applyMiterLimit(this);
     context._applyLineJoin(this);
     if (!caching) {
       if (layer) {
@@ -789,6 +793,7 @@ export class Shape<Config extends ShapeConfig = ShapeConfig> extends Node<
   fillPatternY: GetSet<number, this>;
   fillPriority: GetSet<string, this>;
   hitFunc: GetSet<ShapeConfigHandler<this>, this>;
+  miterLimit: GetSet<number, this>;
   lineCap: GetSet<string, this>;
   lineJoin: GetSet<string, this>;
   perfectDrawEnabled: GetSet<boolean, this>;
@@ -950,6 +955,22 @@ Factory.addGetterSetter(
  *
  * // set shadowForStrokeEnabled
  * shape.shadowForStrokeEnabled();
+ */
+
+Factory.addGetterSetter(Shape, 'miterLimit');
+
+/**
+ * get/set miterLimit.
+ * @name Konva.Shape#miterLimit
+ * @method
+ * @param {Number} miterLimit
+ * @returns {Number}
+ * @example
+ * // get miter limit
+ * var miterLimit = shape.miterLimit();
+ *
+ * // set miter limit
+ * shape.miterLimit(10);
  */
 
 Factory.addGetterSetter(Shape, 'lineJoin');

@@ -266,6 +266,12 @@ export class Context {
       this.setAttr('lineJoin', lineJoin);
     }
   }
+  _applyMiterLimit(shape) {
+    var miterLimit = shape.getMiterLimit();
+    if (miterLimit != null) {
+      this.setAttr('miterLimit', miterLimit);
+    }
+  }
 
   setAttr(attr, val) {
     this._context[attr] = val;
