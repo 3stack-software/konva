@@ -15,14 +15,14 @@ import { Context } from './Context';
 import { Shape } from './Shape';
 import { BaseLayer } from './BaseLayer';
 
-export const ids: any = {};
-export const names: any = {};
+export const ids: Map<string, Node> = new Map();
+export const names: Map<string, Node[]> = new Map();
 
 const _addId = function(node: Node, id: string | undefined) {
   if (!id) {
     return;
   }
-  ids[id] = node;
+  ids.set(id, node);
 };
 
 export const _removeId = function(id: string, node: any) {
@@ -31,18 +31,20 @@ export const _removeId = function(id: string, node: any) {
     return;
   }
   // another node is registered (possible for duplicate ids)
-  if (ids[id] !== node) {
+  if (ids.get(id) !== node) {
     return;
   }
-  delete ids[id];
+  ids.delete(id);
 };
 
 export const _addName = function(node: any, name: string) {
   if (name) {
-    if (!names[name]) {
-      names[name] = [];
+    const nodes = names.get(name);
+    if (nodes != null) {
+      nodes.push(node);
+    } else {
+      names.set(name, [node]);
     }
-    names[name].push(node);
   }
 };
 
@@ -50,18 +52,18 @@ export const _removeName = function(name: string, _id: number) {
   if (!name) {
     return;
   }
-  var nodes = names[name];
-  if (!nodes) {
+  const nodes = names.get(name);
+  if (nodes == null) {
     return;
   }
-  for (var n = 0; n < nodes.length; n++) {
-    var no = nodes[n];
-    if (no._id === _id) {
+  for (var n = nodes.length - 1; n >= 0; n--) {
+    const node = nodes[n];
+    if (node._id === _id) {
       nodes.splice(n, 1);
     }
   }
   if (nodes.length === 0) {
-    delete names[name];
+    names.delete(name)
   }
 };
 
