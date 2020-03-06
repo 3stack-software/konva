@@ -907,6 +907,12 @@ export const Util = {
   _capitalize(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1);
   },
+  _propToSet(str: string) {
+    return 'set' + str.charAt(0).toUpperCase() + str.slice(1);
+  },
+  _propToGet(str: string) {
+    return 'get' + str.charAt(0).toUpperCase() + str.slice(1);
+  },
   throw(str: string) {
     throw new Error(KONVA_ERROR + str);
   },

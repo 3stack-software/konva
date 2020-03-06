@@ -11,7 +11,7 @@ export const Factory = {
     this.addOverloadedGetterSetter(constructor, attr);
   },
   addGetter(constructor, attr, def?) {
-    var method = GET + Util._capitalize(attr);
+    var method = Util._propToGet(attr);
 
     constructor.prototype[method] =
       constructor.prototype[method] ||
@@ -22,14 +22,14 @@ export const Factory = {
   },
 
   addSetter(constructor, attr, validator?, after?) {
-    var method = SET + Util._capitalize(attr);
+    var method = Util._propToSet(attr);
 
     if (!constructor.prototype[method]) {
       Factory.overWriteSetter(constructor, attr, validator, after);
     }
   },
   overWriteSetter(constructor, attr, validator?, after?) {
-    var method = SET + Util._capitalize(attr);
+    var method = Util._propToSet(attr);
     constructor.prototype[method] = function(val) {
       if (validator && val !== undefined && val !== null) {
         val = validator.call(this, val, attr);
@@ -47,8 +47,8 @@ export const Factory = {
   addComponentsGetterSetter(constructor, attr, components, validator?, after?) {
     var len = components.length,
       capitalize = Util._capitalize,
-      getter = GET + capitalize(attr),
-      setter = SET + capitalize(attr),
+      getter = Util._propToGet(attr),
+      setter = Util._propToSet(attr),
       n,
       component;
 
@@ -98,9 +98,8 @@ export const Factory = {
     this.addOverloadedGetterSetter(constructor, attr);
   },
   addOverloadedGetterSetter(constructor, attr) {
-    var capitalizedAttr = Util._capitalize(attr),
-      setter = SET + capitalizedAttr,
-      getter = GET + capitalizedAttr;
+    const setter = Util._propToSet(attr);
+    const getter = Util._propToGet(attr);
 
     constructor.prototype[attr] = function() {
       // setting
@@ -115,7 +114,7 @@ export const Factory = {
   addDeprecatedGetterSetter(constructor, attr, def, validator) {
     Util.error('Adding deprecated ' + attr);
 
-    var method = GET + Util._capitalize(attr);
+    const method = Util._propToGet(attr);
 
     var message =
       attr +
@@ -133,8 +132,8 @@ export const Factory = {
   backCompat(constructor, methods) {
     Util.each(methods, function(oldMethodName, newMethodName) {
       var method = constructor.prototype[newMethodName];
-      var oldGetter = GET + Util._capitalize(oldMethodName);
-      var oldSetter = SET + Util._capitalize(oldMethodName);
+      var oldGetter = Util._propToGet(oldMethodName);
+      var oldSetter = Util._propToSet(oldMethodName);
 
       function deprecated() {
         method.apply(this, arguments);

@@ -899,9 +899,10 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * var x = node.getAttr('x');
    */
   getAttr(attr: string) {
-    var method = 'get' + Util._capitalize(attr);
-    if (Util._isFunction((this as any)[method])) {
-      return (this as any)[method]();
+    const method = Util._propToGet(attr);
+    const func = (this as any)[method];
+    if (Util._isFunction(func)) {
+      return func.call(this);
     }
     // otherwise get directly
     return this.attrs[attr];
@@ -949,7 +950,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * });
    */
   setAttrs(config: any) {
-    var key, method;
+    var key, func, method;
 
     if (!config) {
       return this;
@@ -958,10 +959,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       if (key === CHILDREN) {
         continue;
       }
-      method = SET + Util._capitalize(key);
+      method = Util._propToSet(key);
+      func = this[method];
       // use setter if available
-      if (Util._isFunction(this[method])) {
-        this[method](config[key]);
+      if (Util._isFunction(func)) {
+        func.call(this, config[key]);
       } else {
         // otherwise set directly
         this._setAttr(key, config[key]);
@@ -2190,8 +2192,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * node.setAttr('x', 5);
    */
   setAttr(attr, val) {
-    var func = this[SET + Util._capitalize(attr)];
-
+    const method = Util._propToSet(attr);
+    const func = this[method];
     if (Util._isFunction(func)) {
       func.call(this, val);
     } else {
