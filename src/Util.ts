@@ -533,7 +533,7 @@ export const Util = {
     return !!(obj && obj.nodeType == 1);
   },
   _isFunction(obj: any) {
-    return !!(obj && obj.constructor && obj.call && obj.apply);
+    return typeof obj === 'function';
   },
   _isPlainObject(obj: any) {
     return !!obj && obj.constructor === Object;
