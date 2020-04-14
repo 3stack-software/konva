@@ -4,6 +4,7 @@ import { Konva as Core } from './_CoreInternals';
 
 // shapes
 import { Arc } from './shapes/Arc';
+import { ArcPath } from './shapes/ArcPath';
 import { Arrow } from './shapes/Arrow';
 import { Circle } from './shapes/Circle';
 import { Ellipse } from './shapes/Ellipse';
@@ -45,6 +46,7 @@ import { Threshold } from './filters/Threshold';
 
 export const Konva = Core.Util._assign(Core, {
   Arc,
+  ArcPath,
   Arrow,
   Circle,
   Ellipse,
