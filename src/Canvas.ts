@@ -75,7 +75,7 @@ export class Canvas {
    * get canvas context
    * @method
    * @name Konva.Canvas#getContext
-   * @returns {CanvasContext} context
+   * @returns {Context} context
    */
   getContext() {
     return this.context;
@@ -96,17 +96,16 @@ export class Canvas {
     this.width = this._canvas.width = width * this.pixelRatio;
     this._canvas.style.width = width + 'px';
 
-    var pixelRatio = this.pixelRatio,
-      _context = this.getContext()._context;
-    _context.scale(pixelRatio, pixelRatio);
+    const pixelRatio = this.pixelRatio;
+    this.getContext().scale(pixelRatio, pixelRatio);
   }
   setHeight(height) {
     // take into account pixel ratio
     this.height = this._canvas.height = height * this.pixelRatio;
     this._canvas.style.height = height + 'px';
-    var pixelRatio = this.pixelRatio,
-      _context = this.getContext()._context;
-    _context.scale(pixelRatio, pixelRatio);
+
+    const pixelRatio = this.pixelRatio;
+    this.getContext().scale(pixelRatio, pixelRatio);
   }
   getWidth() {
     return this.width;

@@ -94,11 +94,14 @@ export class Context {
   canvas: Canvas;
   _context: CanvasRenderingContext2D;
   traceArr: Array<String>;
+  _currentTransform: number[];
+  _transformStack: Array<number[]>;
 
   constructor(canvas: Canvas) {
     this.canvas = canvas;
     this._context = canvas._canvas.getContext('2d') as CanvasRenderingContext2D;
-
+    this._currentTransform = [1, 0, 0, 1, 0, 0];
+    this._transformStack = [];
     if (Konva.enableTrace) {
       this.traceArr = [];
       this._enableTrace();
@@ -497,7 +500,11 @@ export class Context {
    * @name Konva.Context#restore
    */
   restore() {
-    this._context.restore();
+    var prev = this._transformStack.pop();
+    if (prev) {
+      this._currentTransform = prev;
+      this._context.restore();
+    }
   }
   /**
    * rotate function.
@@ -505,6 +512,14 @@ export class Context {
    * @name Konva.Context#rotate
    */
   rotate(a0) {
+    const mat = this._currentTransform;
+    const [m0, m1, m2, m3] = mat;
+    const c = Math.cos(a0);
+    const s = Math.sin(a0);
+    mat[0] = m0 * c + m2 * s;
+    mat[1] = m1 * c + m3 * s;
+    mat[2] = m0 * -s + m2 * c;
+    mat[3] = m1 * -s + m3 * c;
     this._context.rotate(a0);
   }
   /**
@@ -513,6 +528,7 @@ export class Context {
    * @name Konva.Context#save
    */
   save() {
+    this._transformStack.push([...this._currentTransform]);
     this._context.save();
   }
   /**
@@ -521,6 +537,12 @@ export class Context {
    * @name Konva.Context#scale
    */
   scale(a0, a1) {
+    const mat = this._currentTransform;
+    const [m0, m1, m2, m3] = mat;
+    mat[0] = m0 * a0;
+    mat[1] = m1 * a0;
+    mat[2] = m2 * a1;
+    mat[3] = m3 * a1;
     this._context.scale(a0, a1);
   }
   /**
@@ -559,6 +581,14 @@ export class Context {
     this._context.setTransform(a0, a1, a2, a3, a4, a5);
   }
   /**
+   * getTransform function.
+   * @method
+   * @name Konva.Context#getTransform
+   */
+  getTransform() {
+    return this._currentTransform.slice();
+  }
+  /**
    * stroke function.
    * @method
    * @name Konva.Context#stroke
@@ -580,6 +610,15 @@ export class Context {
    * @name Konva.Context#transform
    */
   transform(a0, a1, a2, a3, a4, a5) {
+    const mat = this._currentTransform;
+    const [m0, m1, m2, m3, m4, m5] = mat;
+    mat[0] = m0 * a0 + m2 * a1;
+    mat[1] = m1 * a0 + m3 * a1;
+    mat[2] = m0 * a2 + m2 * a3;
+    mat[3] = m1 * a2 + m3 * a3;
+    mat[4] = m0 * a4 + m2 * a5 + m4;
+    mat[5] = m1 * a4 + m3 * a5 + m5;
+
     this._context.transform(a0, a1, a2, a3, a4, a5);
   }
   /**
@@ -588,6 +627,10 @@ export class Context {
    * @name Konva.Context#translate
    */
   translate(a0, a1) {
+    const mat = this._currentTransform
+    const [m0, m1, m2, m3, m4, m5] = mat;
+    mat[4] = m0 * a0 + m2 * a1 + m4;
+    mat[5] = m1 * a0 + m3 * a1 + m5;
     this._context.translate(a0, a1);
   }
   _enableTrace() {
