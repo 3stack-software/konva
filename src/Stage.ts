@@ -428,7 +428,11 @@ export class Stage extends Container<BaseLayer> {
     this.setPointersPositions(evt);
     var pointerId = evt.pointerId;
 
-    if (Konva.listenClickTap != null && Konva.listenClickTap.pointerId === pointerId) {
+    if (Konva.listenClickTap != null
+        && Konva.listenClickTap.pointerId === pointerId
+        && Number.isFinite(evt.movementX)
+        && Number.isFinite(evt.movementY)
+    ) {
       Konva.listenClickTap.x += Math.abs(evt.movementX);
       Konva.listenClickTap.y += Math.abs(evt.movementY);
     }
