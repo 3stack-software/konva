@@ -8,7 +8,7 @@
    * Konva JavaScript Framework v4.1.5
    * http://konvajs.org/
    * Licensed under the MIT
-   * Date: Mon Feb 24 2020
+   * Date: Wed May 20 2020
    *
    * Original work Copyright (C) 2011 - 2013 by Eric Rowell (KineticJS)
    * Modified work Copyright (C) 2014 - present by Anton Lavrenov (Konva)
@@ -79,6 +79,9 @@
       version: '4.1.5',
       isBrowser: detectBrowser(),
       isUnminified: /param/.test(function (param) { }.toString()),
+      pressWindow: 501,
+      clickDistance: 9,
+      clickWindow: 250,
       dblClickWindow: 400,
       getAngle: function (angle) {
           return Konva.angleDeg ? angle * PI_OVER_180 : angle;
@@ -110,7 +113,7 @@
        */
       captureTouchEventsEnabled: false,
       // TODO: move that to stage?
-      listenClickTap: false,
+      listenClickTap: null,
       inDblClickWindow: false,
       /**
        * Global pixel ratio configuration. KonvaJS automatically detect pixel ratio of current device.
@@ -312,6 +315,35 @@
        */
       Transform.prototype.copy = function () {
           return new Transform(this.m);
+      };
+      /**
+       * Copy Konva.Transform object
+       * @method
+       * @name Konva.Transform#copyFrom
+       * @example
+       */
+      Transform.prototype.copyFrom = function (other) {
+          var _a = other.m, a = _a[0], b = _a[1], c = _a[2], d = _a[3], e = _a[4], f = _a[5];
+          this.m[0] = a;
+          this.m[1] = b;
+          this.m[2] = c;
+          this.m[3] = d;
+          this.m[4] = e;
+          this.m[5] = f;
+      };
+      /**
+       * Copy Konva.Transform object
+       * @method
+       * @name Konva.Transform#reset
+       * @example
+       */
+      Transform.prototype.reset = function () {
+          this.m[0] = 1;
+          this.m[1] = 0;
+          this.m[2] = 0;
+          this.m[3] = 1;
+          this.m[4] = 0;
+          this.m[5] = 0;
       };
       /**
        * Transform point
@@ -635,7 +667,7 @@
           return !!(obj && obj.nodeType == 1);
       },
       _isFunction: function (obj) {
-          return !!(obj && obj.constructor && obj.call && obj.apply);
+          return typeof obj === 'function';
       },
       _isPlainObject: function (obj) {
           return !!obj && obj.constructor === Object;
@@ -746,6 +778,15 @@
               g: (bigint >> 8) & 255,
               b: bigint & 255
           };
+      },
+      _24bitToHex: function (rgb) {
+          return HASH + ((1 << 24) + rgb).toString(16).slice(1);
+      },
+      _rgbTo24bit: function (r, g, b) {
+          return (r << 16) + (g << 8) + b;
+      },
+      getRandom24bit: function () {
+          return Math.floor(Math.random() * 0xffffff);
       },
       /**
        * return random hex color
@@ -986,6 +1027,12 @@
       _capitalize: function (str) {
           return str.charAt(0).toUpperCase() + str.slice(1);
       },
+      _propToSet: function (str) {
+          return 'set' + str.charAt(0).toUpperCase() + str.slice(1);
+      },
+      _propToGet: function (str) {
+          return 'get' + str.charAt(0).toUpperCase() + str.slice(1);
+      },
       throw: function (str) {
           throw new Error(KONVA_ERROR + str);
       },
@@ -1151,6 +1198,9 @@
           return target;
       },
       _getFirstPointerId: function (evt) {
+          if (evt.pointerId) {
+              return evt.pointerId;
+          }
           if (!evt.touches) {
               // fake id for mouse
               return 999;
@@ -1276,7 +1326,6 @@
       }
   }
 
-  var GET = 'get', SET = 'set';
   var Factory = {
       addGetterSetter: function (constructor, attr, def, validator, after) {
           this.addGetter(constructor, attr, def);
@@ -1284,7 +1333,7 @@
           this.addOverloadedGetterSetter(constructor, attr);
       },
       addGetter: function (constructor, attr, def) {
-          var method = GET + Util._capitalize(attr);
+          var method = Util._propToGet(attr);
           constructor.prototype[method] =
               constructor.prototype[method] ||
                   function () {
@@ -1293,13 +1342,13 @@
                   };
       },
       addSetter: function (constructor, attr, validator, after) {
-          var method = SET + Util._capitalize(attr);
+          var method = Util._propToSet(attr);
           if (!constructor.prototype[method]) {
               Factory.overWriteSetter(constructor, attr, validator, after);
           }
       },
       overWriteSetter: function (constructor, attr, validator, after) {
-          var method = SET + Util._capitalize(attr);
+          var method = Util._propToSet(attr);
           constructor.prototype[method] = function (val) {
               if (validator && val !== undefined && val !== null) {
                   val = validator.call(this, val, attr);
@@ -1312,7 +1361,7 @@
           };
       },
       addComponentsGetterSetter: function (constructor, attr, components, validator, after) {
-          var len = components.length, capitalize = Util._capitalize, getter = GET + capitalize(attr), setter = SET + capitalize(attr), n, component;
+          var len = components.length, capitalize = Util._capitalize, getter = Util._propToGet(attr), setter = Util._propToSet(attr), n, component;
           // getter
           constructor.prototype[getter] = function () {
               var ret = {};
@@ -1347,7 +1396,8 @@
           this.addOverloadedGetterSetter(constructor, attr);
       },
       addOverloadedGetterSetter: function (constructor, attr) {
-          var capitalizedAttr = Util._capitalize(attr), setter = SET + capitalizedAttr, getter = GET + capitalizedAttr;
+          var setter = Util._propToSet(attr);
+          var getter = Util._propToGet(attr);
           constructor.prototype[attr] = function () {
               // setting
               if (arguments.length) {
@@ -1360,7 +1410,7 @@
       },
       addDeprecatedGetterSetter: function (constructor, attr, def, validator) {
           Util.error('Adding deprecated ' + attr);
-          var method = GET + Util._capitalize(attr);
+          var method = Util._propToGet(attr);
           var message = attr +
               ' property is deprecated and will be removed soon. Look at Konva change log for more information.';
           constructor.prototype[method] = function () {
@@ -1376,8 +1426,8 @@
       backCompat: function (constructor, methods) {
           Util.each(methods, function (oldMethodName, newMethodName) {
               var method = constructor.prototype[newMethodName];
-              var oldGetter = GET + Util._capitalize(oldMethodName);
-              var oldSetter = SET + Util._capitalize(oldMethodName);
+              var oldGetter = Util._propToGet(oldMethodName);
+              var oldSetter = Util._propToSet(oldMethodName);
               function deprecated() {
                   method.apply(this, arguments);
                   Util.error('"' +
@@ -1516,6 +1566,8 @@
       function Context(canvas) {
           this.canvas = canvas;
           this._context = canvas._canvas.getContext('2d');
+          this._currentTransform = [1, 0, 0, 1, 0, 0];
+          this._transformStack = [];
           if (Konva.enableTrace) {
               this.traceArr = [];
               this._enableTrace();
@@ -1655,6 +1707,12 @@
           var lineJoin = shape.getLineJoin();
           if (lineJoin) {
               this.setAttr('lineJoin', lineJoin);
+          }
+      };
+      Context.prototype._applyMiterLimit = function (shape) {
+          var miterLimit = shape.getMiterLimit();
+          if (miterLimit != null) {
+              this.setAttr('miterLimit', miterLimit);
           }
       };
       Context.prototype.setAttr = function (attr, val) {
@@ -1881,7 +1939,11 @@
        * @name Konva.Context#restore
        */
       Context.prototype.restore = function () {
-          this._context.restore();
+          var prev = this._transformStack.pop();
+          if (prev) {
+              this._currentTransform = prev;
+              this._context.restore();
+          }
       };
       /**
        * rotate function.
@@ -1889,6 +1951,14 @@
        * @name Konva.Context#rotate
        */
       Context.prototype.rotate = function (a0) {
+          var mat = this._currentTransform;
+          var m0 = mat[0], m1 = mat[1], m2 = mat[2], m3 = mat[3];
+          var c = Math.cos(a0);
+          var s = Math.sin(a0);
+          mat[0] = m0 * c + m2 * s;
+          mat[1] = m1 * c + m3 * s;
+          mat[2] = m0 * -s + m2 * c;
+          mat[3] = m1 * -s + m3 * c;
           this._context.rotate(a0);
       };
       /**
@@ -1897,6 +1967,7 @@
        * @name Konva.Context#save
        */
       Context.prototype.save = function () {
+          this._transformStack.push(__spreadArrays(this._currentTransform));
           this._context.save();
       };
       /**
@@ -1905,6 +1976,12 @@
        * @name Konva.Context#scale
        */
       Context.prototype.scale = function (a0, a1) {
+          var mat = this._currentTransform;
+          var m0 = mat[0], m1 = mat[1], m2 = mat[2], m3 = mat[3];
+          mat[0] = m0 * a0;
+          mat[1] = m1 * a0;
+          mat[2] = m2 * a1;
+          mat[3] = m3 * a1;
           this._context.scale(a0, a1);
       };
       /**
@@ -1941,7 +2018,22 @@
        * @name Konva.Context#setTransform
        */
       Context.prototype.setTransform = function (a0, a1, a2, a3, a4, a5) {
+          var mat = this._currentTransform;
+          mat[0] = a0;
+          mat[1] = a1;
+          mat[2] = a2;
+          mat[3] = a3;
+          mat[4] = a4;
+          mat[5] = a5;
           this._context.setTransform(a0, a1, a2, a3, a4, a5);
+      };
+      /**
+       * getTransform function.
+       * @method
+       * @name Konva.Context#getTransform
+       */
+      Context.prototype.getTransform = function () {
+          return this._currentTransform.slice();
       };
       /**
        * stroke function.
@@ -1965,6 +2057,14 @@
        * @name Konva.Context#transform
        */
       Context.prototype.transform = function (a0, a1, a2, a3, a4, a5) {
+          var mat = this._currentTransform;
+          var m0 = mat[0], m1 = mat[1], m2 = mat[2], m3 = mat[3], m4 = mat[4], m5 = mat[5];
+          mat[0] = m0 * a0 + m2 * a1;
+          mat[1] = m1 * a0 + m3 * a1;
+          mat[2] = m0 * a2 + m2 * a3;
+          mat[3] = m1 * a2 + m3 * a3;
+          mat[4] = m0 * a4 + m2 * a5 + m4;
+          mat[5] = m1 * a4 + m3 * a5 + m5;
           this._context.transform(a0, a1, a2, a3, a4, a5);
       };
       /**
@@ -1973,6 +2073,10 @@
        * @name Konva.Context#translate
        */
       Context.prototype.translate = function (a0, a1) {
+          var mat = this._currentTransform;
+          var m0 = mat[0], m1 = mat[1], m2 = mat[2], m3 = mat[3], m4 = mat[4], m5 = mat[5];
+          mat[4] = m0 * a0 + m2 * a1 + m4;
+          mat[5] = m1 * a0 + m3 * a1 + m5;
           this._context.translate(a0, a1);
       };
       Context.prototype._enableTrace = function () {
@@ -2251,7 +2355,7 @@
        * get canvas context
        * @method
        * @name Konva.Canvas#getContext
-       * @returns {CanvasContext} context
+       * @returns {Context} context
        */
       Canvas.prototype.getContext = function () {
           return this.context;
@@ -2268,15 +2372,11 @@
           // take into account pixel ratio
           this.width = this._canvas.width = width * this.pixelRatio;
           this._canvas.style.width = width + 'px';
-          var pixelRatio = this.pixelRatio, _context = this.getContext()._context;
-          _context.scale(pixelRatio, pixelRatio);
       };
       Canvas.prototype.setHeight = function (height) {
           // take into account pixel ratio
           this.height = this._canvas.height = height * this.pixelRatio;
           this._canvas.style.height = height + 'px';
-          var pixelRatio = this.pixelRatio, _context = this.getContext()._context;
-          _context.scale(pixelRatio, pixelRatio);
       };
       Canvas.prototype.getWidth = function () {
           return this.width;
@@ -2391,7 +2491,7 @@
               if (elem.pointerId === undefined) {
                   elem.pointerId = Util._getFirstPointerId(evt);
               }
-              var pos = stage._changedPointerPositions.find(function (pos) { return pos.id === elem.pointerId; });
+              var pos = stage._changedPointerPositions.get(elem.pointerId);
               // not related pointer
               if (!pos) {
                   return;
@@ -2421,13 +2521,16 @@
       // setup all in dragbefore, and stop dragging only after pointerup triggered.
       _endDragBefore: function (evt) {
           DD._dragElements.forEach(function (elem, key) {
+              if (elem.dragStatus === 'ready') {
+                  return;
+              }
               var node = elem.node;
               // we need to find pointer relative to that node
               var stage = node.getStage();
               if (evt) {
                   stage.setPointersPositions(evt);
               }
-              var pos = stage._changedPointerPositions.find(function (pos) { return pos.id === elem.pointerId; });
+              var pos = stage._changedPointerPositions.get(elem.pointerId);
               // that pointer is not related
               if (!pos) {
                   return;
@@ -2435,7 +2538,7 @@
               if (elem.dragStatus === 'dragging' || elem.dragStatus === 'stopped') {
                   // if a node is stopped manully we still need to reset events:
                   DD.justDragged = true;
-                  Konva.listenClickTap = false;
+                  Konva.listenClickTap = null;
                   elem.dragStatus = 'stopped';
               }
               var drawNode = elem.node.getLayer() ||
@@ -2461,21 +2564,19 @@
       }
   };
   if (Konva.isBrowser) {
-      window.addEventListener('mouseup', DD._endDragBefore, true);
-      window.addEventListener('touchend', DD._endDragBefore, true);
-      window.addEventListener('mousemove', DD._drag);
-      window.addEventListener('touchmove', DD._drag);
-      window.addEventListener('mouseup', DD._endDragAfter, false);
-      window.addEventListener('touchend', DD._endDragAfter, false);
+      window.addEventListener('pointerup', DD._endDragBefore, true);
+      window.addEventListener('pointermove', DD._drag);
+      window.addEventListener('pointerup', DD._endDragAfter, false);
+      window.addEventListener('pointercancel', DD._endDragAfter, false);
   }
 
-  var ids = {};
-  var names = {};
+  var ids = new Map();
+  var names = new Map();
   var _addId = function (node, id) {
       if (!id) {
           return;
       }
-      ids[id] = node;
+      ids.set(id, node);
   };
   var _removeId = function (id, node) {
       // node has no id
@@ -2483,39 +2584,42 @@
           return;
       }
       // another node is registered (possible for duplicate ids)
-      if (ids[id] !== node) {
+      if (ids.get(id) !== node) {
           return;
       }
-      delete ids[id];
+      ids.delete(id);
   };
   var _addName = function (node, name) {
       if (name) {
-          if (!names[name]) {
-              names[name] = [];
+          var nodes = names.get(name);
+          if (nodes != null) {
+              nodes.push(node);
           }
-          names[name].push(node);
+          else {
+              names.set(name, [node]);
+          }
       }
   };
   var _removeName = function (name, _id) {
       if (!name) {
           return;
       }
-      var nodes = names[name];
-      if (!nodes) {
+      var nodes = names.get(name);
+      if (nodes == null) {
           return;
       }
-      for (var n = 0; n < nodes.length; n++) {
-          var no = nodes[n];
-          if (no._id === _id) {
+      for (var n = nodes.length - 1; n >= 0; n--) {
+          var node = nodes[n];
+          if (node._id === _id) {
               nodes.splice(n, 1);
           }
       }
       if (nodes.length === 0) {
-          delete names[name];
+          names.delete(name);
       }
   };
   // CONSTANTS
-  var ABSOLUTE_OPACITY = 'absoluteOpacity', ABSOLUTE_TRANSFORM = 'absoluteTransform', ABSOLUTE_SCALE = 'absoluteScale', CANVAS = 'canvas', CHANGE = 'Change', CHILDREN = 'children', KONVA = 'konva', LISTENING = 'listening', MOUSEENTER = 'mouseenter', MOUSELEAVE = 'mouseleave', NAME = 'name', SET$1 = 'set', SHAPE = 'Shape', SPACE = ' ', STAGE = 'stage', TRANSFORM = 'transform', UPPER_STAGE = 'Stage', VISIBLE = 'visible', TRANSFORM_CHANGE_STR = [
+  var ABSOLUTE_OPACITY = 'absoluteOpacity', ABSOLUTE_TRANSFORM = 'absoluteTransform', ABSOLUTE_SCALE = 'absoluteScale', CANVAS = 'canvas', CHANGE = 'Change', CHILDREN = 'children', KONVA = 'konva', LISTENING = 'listening', POINTERENTER = 'pointerenter', POINTERLEAVE = 'pointerleave', NAME = 'name', SHAPE = 'Shape', SPACE = ' ', STAGE = 'stage', TRANSFORM = 'transform', UPPER_STAGE = 'Stage', VISIBLE = 'visible', TRANSFORM_CHANGE_STR = [
       'xChange.konva',
       'yChange.konva',
       'scaleXChange.konva',
@@ -2566,6 +2670,7 @@
           this.index = 0;
           this.parent = null;
           this._cache = new Map();
+          this._at = new Transform();
           this._lastPos = null;
           this._filterUpToDate = false;
           this._isUnderCache = false;
@@ -2898,15 +3003,15 @@
           return sceneCanvas;
       };
       /**
-       * bind events to the node. KonvaJS supports mouseover, mousemove,
-       *  mouseout, mouseenter, mouseleave, mousedown, mouseup, wheel, contextmenu, click, dblclick, touchstart, touchmove,
-       *  touchend, tap, dbltap, dragstart, dragmove, and dragend events.
+       * bind events to the node. KonvaJS supports pointerover, pointermove,
+       *  pointerout, pointerenter, pointerleave, pointerdown, pointerup, wheel, contextmenu, click, dblclick,
+       *  dragstart, dragmove, and dragend events.
        *  Pass in a string of events delimited by a space to bind multiple events at once
-       *  such as 'mousedown mouseup mousemove'. Include a namespace to bind an
+       *  such as 'pointerdown pointerup pointermove'. Include a namespace to bind an
        *  event by name such as 'click.foobar'.
        * @method
        * @name Konva.Node#on
-       * @param {String} evtStr e.g. 'click', 'mousedown touchstart', 'mousedown.foo touchstart.foo'
+       * @param {String} evtStr e.g. 'click', 'pointerdown pointerup', 'pointerdown.foo touchstart.foo'
        * @param {Function} handler The handler function is passed an event object
        * @returns {Konva.Node}
        * @example
@@ -2965,7 +3070,7 @@
           var events = evtStr.split(SPACE), len = events.length, n, event, parts, baseEvent, name;
           /*
            * loop through types and attach event listeners to
-           * each one.  eg. 'click mouseover.namespace mouseout'
+           * each one.  eg. 'click pointerover.namespace pointerout'
            * will create three event bindings
            */
           for (n = 0; n < len; n++) {
@@ -2987,13 +3092,13 @@
       /**
        * remove event bindings from the node. Pass in a string of
        *  event types delimmited by a space to remove multiple event
-       *  bindings at once such as 'mousedown mouseup mousemove'.
+       *  bindings at once such as 'pointerdown pointerup pointermove'.
        *  include a namespace to remove an event binding by name
        *  such as 'click.foobar'. If you only give a name like '.foobar',
        *  all events in that namespace will be removed.
        * @method
        * @name Konva.Node#off
-       * @param {String} evtStr e.g. 'click', 'mousedown touchstart', '.foobar'
+       * @param {String} evtStr e.g. 'click', 'pointerdown touchstart', '.foobar'
        * @returns {Konva.Node}
        * @example
        * // remove listener
@@ -3131,9 +3236,10 @@
        * var x = node.getAttr('x');
        */
       Node.prototype.getAttr = function (attr) {
-          var method = 'get' + Util._capitalize(attr);
-          if (Util._isFunction(this[method])) {
-              return this[method]();
+          var method = Util._propToGet(attr);
+          var func = this[method];
+          if (Util._isFunction(func)) {
+              return func.call(this);
           }
           // otherwise get directly
           return this.attrs[attr];
@@ -3178,7 +3284,7 @@
        * });
        */
       Node.prototype.setAttrs = function (config) {
-          var key, method;
+          var key, func, method;
           if (!config) {
               return this;
           }
@@ -3186,10 +3292,11 @@
               if (key === CHILDREN) {
                   continue;
               }
-              method = SET$1 + Util._capitalize(key);
+              method = Util._propToSet(key);
+              func = this[method];
               // use setter if available
-              if (Util._isFunction(this[method])) {
-                  this[method](config[key]);
+              if (Util._isFunction(func)) {
+                  func.call(this, config[key]);
               }
               else {
                   // otherwise set directly
@@ -3237,44 +3344,33 @@
           }
       };
       /**
-         * determine if node is visible by taking into account ancestors.
-         *
-         * Parent    | Self      | isVisible
-         * visible   | visible   |
-         * ----------+-----------+------------
-         * T         | T         | T
-         * T         | F         | F
-         * F         | T         | T
-         * F         | F         | F
-         * ----------+-----------+------------
-         * T         | I         | T
-         * F         | I         | F
-         * I         | I         | T
-    
-          * @method
-          * @name Konva.Node#isVisible
-          * @returns {Boolean}
-          */
+       * determine if node is visible by taking into account ancestors.
+       *
+       * Parent    | Self      | isVisible
+       * visible   | visible   |
+       * ----------+-----------+------------
+       * T         | T         | T
+       * T         | F         | F
+       * F         | T         | F
+       * F         | F         | F
+       * @method
+       * @name Konva.Node#isVisible
+       * @returns {Boolean}
+       */
       Node.prototype.isVisible = function () {
           return this._getCache(VISIBLE, this._isVisible);
       };
       Node.prototype._isVisible = function (relativeTo) {
-          var visible = this.visible(), parent = this.getParent();
-          // the following conditions are a simplification of the truth table above.
-          // please modify carefully
-          if (visible === 'inherit') {
-              if (parent && parent !== relativeTo) {
-                  return parent._isVisible(relativeTo);
-              }
-              else {
-                  return true;
-              }
+          var visible = this.visible();
+          if (!visible) {
+              return false;
           }
-          else if (relativeTo && relativeTo !== parent) {
-              return visible && parent._isVisible(relativeTo);
+          var parent = this.getParent();
+          if (parent && parent !== relativeTo) {
+              return parent._isVisible(relativeTo);
           }
           else {
-              return visible;
+              return true;
           }
       };
       /**
@@ -3797,7 +3893,7 @@
        * fire event
        * @method
        * @name Konva.Node#fire
-       * @param {String} eventType event type.  can be a regular event, like click, mouseover, or mouseout, or it can be a custom event, like myCustomEvent
+       * @param {String} eventType event type.  can be a regular event, like click, pointerover, or pointerout, or it can be a custom event, like myCustomEvent
        * @param {Event} [evt] event object
        * @param {Boolean} [bubble] setting the value to false, or leaving it undefined, will result in the event
        *  not bubbling.  Setting the value to true will result in the event bubbling.
@@ -3865,13 +3961,14 @@
               return at;
           }
           else {
+              at = this._at;
               // try to use a cached value
               if (this.parent) {
                   // transform will be cached
-                  at = this.parent.getAbsoluteTransform().copy();
+                  at.copyFrom(this.parent.getAbsoluteTransform());
               }
               else {
-                  at = new Transform();
+                  at.reset();
               }
               var transformsEnabled = this.transformsEnabled();
               if (transformsEnabled === 'all') {
@@ -4197,8 +4294,16 @@
           return this;
       };
       Node.prototype.setName = function (name) {
-          var oldNames = (this.name() || '').split(/\s/g);
-          var newNames = (name || '').split(/\s/g);
+          var oldName = this.name() || '';
+          var newName = name || '';
+          if (oldName.indexOf(SPACE) < 0 && newName.indexOf(SPACE) < 0 && oldName !== newName) {
+              _removeName(oldName, this._id);
+              _addName(this, newName);
+              this._setAttr(NAME, name);
+              return this;
+          }
+          var oldNames = oldName.split(/\s/g);
+          var newNames = newName.split(/\s/g);
           var subname, i;
           // remove all subnames
           for (i = 0; i < oldNames.length; i++) {
@@ -4292,7 +4397,8 @@
        * node.setAttr('x', 5);
        */
       Node.prototype.setAttr = function (attr, val) {
-          var func = this[SET$1 + Util._capitalize(attr)];
+          var method = Util._propToSet(attr);
+          var func = this[method];
           if (Util._isFunction(func)) {
               func.call(this, val);
           }
@@ -4331,7 +4437,7 @@
           if (evt && this.nodeType === SHAPE) {
               evt.target = this;
           }
-          var shouldStop = (eventType === MOUSEENTER || eventType === MOUSELEAVE) &&
+          var shouldStop = (eventType === POINTERENTER || eventType === POINTERLEAVE) &&
               ((compareShape &&
                   (this === compareShape ||
                       (this.isAncestorOf && this.isAncestorOf(compareShape)))) ||
@@ -4339,7 +4445,7 @@
           if (!shouldStop) {
               this._fire(eventType, evt);
               // simulate event bubbling
-              var stopBubble = (eventType === MOUSEENTER || eventType === MOUSELEAVE) &&
+              var stopBubble = (eventType === POINTERENTER || eventType === POINTERLEAVE) &&
                   compareShape &&
                   compareShape.isAncestorOf &&
                   compareShape.isAncestorOf(this) &&
@@ -4385,7 +4491,6 @@
           var stage = this.getStage();
           var ap = this.getAbsolutePosition();
           var pos = stage._getPointerById(pointerId) ||
-              stage._changedPointerPositions[0] ||
               ap;
           DD._dragElements.set(this._id, {
               node: this,
@@ -4477,10 +4582,10 @@
       };
       Node.prototype._listenDrag = function () {
           this._dragCleanup();
-          this.on('mousedown.konva touchstart.konva', function (evt) {
+          this.on('pointerdown.konva', function (evt) {
               var _this = this;
-              var shouldCheckButton = evt.evt['button'] !== undefined;
-              var canDrag = !shouldCheckButton || Konva.dragButtons.indexOf(evt.evt['button']) >= 0;
+              var shouldCheckButton = evt.evt.pointerType === 'mouse';
+              var canDrag = !shouldCheckButton || Konva.dragButtons.indexOf(evt.evt.button) >= 0;
               if (!canDrag) {
                   return;
               }
@@ -4519,8 +4624,7 @@
           }
       };
       Node.prototype._dragCleanup = function () {
-          this.off('mousedown.konva');
-          this.off('touchstart.konva');
+          this.off('pointerdown.konva');
       };
       /**
        * create node with JSON string or an Object.  De-serializtion does not generate custom
@@ -4981,22 +5085,15 @@
    *   Konva.Filters.Invert
    * ]);
    */
-  Factory.addGetterSetter(Node, 'visible', 'inherit', function (val) {
-      var isValid = val === true || val === false || val === 'inherit';
-      if (!isValid) {
-          Util.warn(val +
-              ' is a not valid value for "visible" attribute. The value may be true, false or "inherit".');
-      }
-      return val;
-  });
+  Factory.addGetterSetter(Node, 'visible', true, getBooleanValidator());
   /**
-   * get/set visible attr.  Can be "inherit", true, or false.  The default is "inherit".
+   * get/set visible attr.  Can be true, or false.  The default is true.
    *   If you need to determine if a node is visible or not
    *   by taking into account its parents, use the isVisible() method
    * @name Konva.Node#visible
    * @method
-   * @param {Boolean|String} visible
-   * @returns {Boolean|String}
+   * @param {Boolean} visible
+   * @returns {Boolean}
    * @example
    * // get visible attr
    * var visible = node.visible();
@@ -5004,11 +5101,9 @@
    * // make invisible
    * node.visible(false);
    *
-   * // make visible
+   * // make visible (according to the parent)
    * node.visible(true);
    *
-   * // make visible according to the parent
-   * node.visible('inherit');
    */
   Factory.addGetterSetter(Node, 'transformsEnabled', 'all', getStringValidator());
   /**
@@ -5734,23 +5829,15 @@
   }
 
   // CONSTANTS
-  var STAGE$1 = 'Stage', STRING = 'string', PX = 'px', MOUSEOUT = 'mouseout', MOUSELEAVE$1 = 'mouseleave', MOUSEOVER = 'mouseover', MOUSEENTER$1 = 'mouseenter', MOUSEMOVE = 'mousemove', MOUSEDOWN = 'mousedown', MOUSEUP = 'mouseup', 
-  // TODO: add them into "on" method docs and into site docs
-  POINTERMOVE = 'pointermove', POINTERDOWN = 'pointerdown', POINTERUP = 'pointerup', POINTERCANCEL = 'pointercancel', LOSTPOINTERCAPTURE = 'lostpointercapture', CONTEXTMENU = 'contextmenu', CLICK = 'click', DBL_CLICK = 'dblclick', TOUCHSTART = 'touchstart', TOUCHEND = 'touchend', TAP = 'tap', DBL_TAP = 'dbltap', TOUCHMOVE = 'touchmove', WHEEL = 'wheel', CONTENT_MOUSEOUT = 'contentMouseout', CONTENT_MOUSEOVER = 'contentMouseover', CONTENT_MOUSEMOVE = 'contentMousemove', CONTENT_MOUSEDOWN = 'contentMousedown', CONTENT_MOUSEUP = 'contentMouseup', CONTENT_CONTEXTMENU = 'contentContextmenu', CONTENT_CLICK = 'contentClick', CONTENT_DBL_CLICK = 'contentDblclick', CONTENT_TOUCHSTART = 'contentTouchstart', CONTENT_TOUCHEND = 'contentTouchend', CONTENT_DBL_TAP = 'contentDbltap', CONTENT_TAP = 'contentTap', CONTENT_TOUCHMOVE = 'contentTouchmove', CONTENT_WHEEL = 'contentWheel', RELATIVE = 'relative', KONVA_CONTENT = 'konvajs-content', UNDERSCORE = '_', CONTAINER = 'container', MAX_LAYERS_NUMBER = 5, EMPTY_STRING$1 = '', EVENTS = [
-      MOUSEENTER$1,
-      MOUSEDOWN,
-      MOUSEMOVE,
-      MOUSEUP,
-      MOUSEOUT,
-      TOUCHSTART,
-      TOUCHMOVE,
-      TOUCHEND,
-      MOUSEOVER,
-      WHEEL,
-      CONTEXTMENU,
+  var STAGE$1 = 'Stage', STRING = 'string', PX = 'px', POINTEROUT = 'pointerout', POINTERLEAVE$1 = 'pointerleave', POINTEROVER = 'pointerover', POINTERENTER$1 = 'pointerenter', POINTERMOVE = 'pointermove', POINTERDOWN = 'pointerdown', POINTERUP = 'pointerup', POINTERCANCEL = 'pointercancel', LOSTPOINTERCAPTURE = 'lostpointercapture', CONTEXTMENU = 'contextmenu', CLICK = 'click', PRESS = 'press', DBL_CLICK = 'dblclick', WHEEL = 'wheel', CONTENT_POINTEROUT = 'contentPointerout', CONTENT_POINTEROVER = 'contentPointerover', CONTENT_POINTERMOVE = 'contentPointermove', CONTENT_POINTERDOWN = 'contentPointerdown', CONTENT_POINTERUP = 'contentPointerup', CONTENT_POINTERCANCEL = 'contentPointercancel', CONTENT_LOSTPOINTERCAPTURE = 'contentLostpointercapture', CONTENT_CONTEXTMENU = 'contentContextmenu', CONTENT_CLICK = 'contentClick', CONTENT_DBL_CLICK = 'contentDblclick', CONTENT_WHEEL = 'contentWheel', RELATIVE = 'relative', KONVA_CONTENT = 'konvajs-content', UNDERSCORE = '_', CONTAINER = 'container', MAX_LAYERS_NUMBER = 5, EMPTY_STRING$1 = '', EVENTS = [
+      POINTERENTER$1,
       POINTERDOWN,
       POINTERMOVE,
       POINTERUP,
+      POINTEROUT,
+      POINTEROVER,
+      WHEEL,
+      CONTEXTMENU,
       POINTERCANCEL,
       LOSTPOINTERCAPTURE
   ], 
@@ -5761,7 +5848,6 @@
           ctx[UNDERSCORE + eventName](evt);
       }, false);
   }
-  var NO_POINTERS_MESSAGE = "Pointer position is missing and not registered by the stage. Looks like it is outside of the stage container. You can set it manually from event: stage.setPointersPositions(event);";
   var stages = [];
   function checkNoClip(attrs) {
       if (attrs === void 0) { attrs = {}; }
@@ -5808,8 +5894,8 @@
       __extends(Stage, _super);
       function Stage(config) {
           var _this = _super.call(this, checkNoClip(config)) || this;
-          _this._pointerPositions = [];
-          _this._changedPointerPositions = [];
+          _this._pointerPositions = new Map();
+          _this._changedPointerPositions = new Map();
           _this._buildDOM();
           _this._bindContentEvents();
           stages.push(_this);
@@ -5902,27 +5988,11 @@
           }
           return this;
       };
-      /**
-       * returns absolute pointer position which can be a touch position or mouse position
-       * pointer position doesn't include any transforms (such as scale) of the stage
-       * it is just a plain position of pointer relative to top-left corner of the stage container
-       * @method
-       * @name Konva.Stage#getPointerPosition
-       * @returns {Vector2d|null}
-       */
-      Stage.prototype.getPointerPosition = function () {
-          var pos = this._pointerPositions[0] || this._changedPointerPositions[0];
-          if (!pos) {
-              Util.warn(NO_POINTERS_MESSAGE);
-              return null;
-          }
-          return {
-              x: pos.x,
-              y: pos.y
-          };
+      Stage.prototype.getPointerById = function (id) {
+          return this._pointerPositions.get(id) || this._changedPointerPositions.get(id);
       };
       Stage.prototype._getPointerById = function (id) {
-          return this._pointerPositions.find(function (p) { return p.id === id; });
+          return this.getPointerById(id);
       };
       Stage.prototype.getPointersPositions = function () {
           return this._pointerPositions;
@@ -6050,77 +6120,79 @@
               addEvent(this, EVENTS[n]);
           }
       };
-      Stage.prototype._mouseenter = function (evt) {
+      Stage.prototype._pointerenter = function (evt) {
           this.setPointersPositions(evt);
-          this._fire(MOUSEENTER$1, { evt: evt, target: this, currentTarget: this });
+          this._fire(POINTERENTER$1, { evt: evt, target: this, currentTarget: this });
       };
-      Stage.prototype._mouseover = function (evt) {
+      Stage.prototype._pointerover = function (evt) {
           this.setPointersPositions(evt);
-          this._fire(CONTENT_MOUSEOVER, { evt: evt });
-          this._fire(MOUSEOVER, { evt: evt, target: this, currentTarget: this });
+          this._fire(CONTENT_POINTEROVER, { evt: evt });
+          this._fire(POINTEROVER, { evt: evt, target: this, currentTarget: this });
       };
-      Stage.prototype._mouseout = function (evt) {
+      Stage.prototype._pointerout = function (evt) {
           this.setPointersPositions(evt);
           var targetShape = this.targetShape;
           var eventsEnabled = !DD.isDragging || Konva.hitOnDragEnabled;
           if (targetShape && eventsEnabled) {
-              targetShape._fireAndBubble(MOUSEOUT, { evt: evt });
-              targetShape._fireAndBubble(MOUSELEAVE$1, { evt: evt });
-              this._fire(MOUSELEAVE$1, { evt: evt, target: this, currentTarget: this });
+              targetShape._fireAndBubble(POINTEROUT, { evt: evt });
+              targetShape._fireAndBubble(POINTERLEAVE$1, { evt: evt });
+              this._fire(POINTERLEAVE$1, { evt: evt, target: this, currentTarget: this });
               this.targetShape = null;
           }
           else if (eventsEnabled) {
-              this._fire(MOUSELEAVE$1, {
+              this._fire(POINTERLEAVE$1, {
                   evt: evt,
                   target: this,
                   currentTarget: this
               });
-              this._fire(MOUSEOUT, {
+              this._fire(POINTEROUT, {
                   evt: evt,
                   target: this,
                   currentTarget: this
               });
           }
-          this.pointerPos = undefined;
-          this._pointerPositions = [];
-          this._fire(CONTENT_MOUSEOUT, { evt: evt });
+          this._pointerPositions.delete(evt.pointerId);
+          this._fire(CONTENT_POINTEROUT, { evt: evt });
       };
-      Stage.prototype._mousemove = function (evt) {
-          // workaround for mobile IE to force touch event when unhandled pointer event elevates into a mouse event
-          if (Konva.UA.ieMobile) {
-              return this._touchmove(evt);
-          }
+      Stage.prototype._pointermove = function (evt) {
           this.setPointersPositions(evt);
-          var pointerId = Util._getFirstPointerId(evt);
-          var shape;
+          var pointerId = evt.pointerId;
+          if (Konva.listenClickTap != null
+              && Konva.listenClickTap.pointerId === pointerId
+              && Number.isFinite(evt.movementX)
+              && Number.isFinite(evt.movementY)) {
+              Konva.listenClickTap.x += Math.abs(evt.movementX);
+              Konva.listenClickTap.y += Math.abs(evt.movementY);
+          }
           var eventsEnabled = !DD.isDragging || Konva.hitOnDragEnabled;
           if (eventsEnabled) {
-              shape = this.getIntersection(this.getPointerPosition());
+              var shape = getCapturedShape(pointerId)
+                  || this.getIntersection(this._getPointerById(pointerId));
               if (shape && shape.isListening()) {
                   var differentTarget = !this.targetShape || this.targetShape !== shape;
                   if (eventsEnabled && differentTarget) {
                       if (this.targetShape) {
-                          this.targetShape._fireAndBubble(MOUSEOUT, { evt: evt, pointerId: pointerId }, shape);
-                          this.targetShape._fireAndBubble(MOUSELEAVE$1, { evt: evt, pointerId: pointerId }, shape);
+                          this.targetShape._fireAndBubble(POINTEROUT, { evt: evt, pointerId: pointerId }, shape);
+                          this.targetShape._fireAndBubble(POINTERLEAVE$1, { evt: evt, pointerId: pointerId }, shape);
                       }
-                      shape._fireAndBubble(MOUSEOVER, { evt: evt, pointerId: pointerId }, this.targetShape);
-                      shape._fireAndBubble(MOUSEENTER$1, { evt: evt, pointerId: pointerId }, this.targetShape);
-                      shape._fireAndBubble(MOUSEMOVE, { evt: evt, pointerId: pointerId });
+                      shape._fireAndBubble(POINTEROVER, { evt: evt, pointerId: pointerId }, this.targetShape);
+                      shape._fireAndBubble(POINTERENTER$1, { evt: evt, pointerId: pointerId }, this.targetShape);
+                      shape._fireAndBubble(POINTERMOVE, { evt: evt, pointerId: pointerId });
                       this.targetShape = shape;
                   }
                   else {
-                      shape._fireAndBubble(MOUSEMOVE, { evt: evt, pointerId: pointerId });
+                      shape._fireAndBubble(POINTERMOVE, { evt: evt, pointerId: pointerId });
                   }
               }
               else {
                   /*
                    * if no shape was detected, clear target shape and try
-                   * to run mouseout from previous target shape
+                   * to run pointerout from previous target shape
                    */
                   if (this.targetShape && eventsEnabled) {
-                      this.targetShape._fireAndBubble(MOUSEOUT, { evt: evt, pointerId: pointerId });
-                      this.targetShape._fireAndBubble(MOUSELEAVE$1, { evt: evt, pointerId: pointerId });
-                      this._fire(MOUSEOVER, {
+                      this.targetShape._fireAndBubble(POINTEROUT, { evt: evt, pointerId: pointerId });
+                      this.targetShape._fireAndBubble(POINTERLEAVE$1, { evt: evt, pointerId: pointerId });
+                      this._fire(POINTEROVER, {
                           evt: evt,
                           target: this,
                           currentTarget: this,
@@ -6128,7 +6200,7 @@
                       });
                       this.targetShape = null;
                   }
-                  this._fire(MOUSEMOVE, {
+                  this._fire(POINTERMOVE, {
                       evt: evt,
                       target: this,
                       currentTarget: this,
@@ -6136,7 +6208,7 @@
                   });
               }
               // content event
-              this._fire(CONTENT_MOUSEMOVE, { evt: evt });
+              this._fire(CONTENT_POINTERMOVE, { evt: evt });
           }
           // always call preventDefault for desktop events because some browsers
           // try to drag and drop the canvas element
@@ -6144,22 +6216,52 @@
               evt.preventDefault();
           }
       };
-      Stage.prototype._mousedown = function (evt) {
-          // workaround for mobile IE to force touch event when unhandled pointer event elevates into a mouse event
-          if (Konva.UA.ieMobile) {
-              return this._touchstart(evt);
-          }
+      Stage.prototype._pointerdown = function (evt) {
+          var _this = this;
           this.setPointersPositions(evt);
-          var pointerId = Util._getFirstPointerId(evt);
-          var shape = this.getIntersection(this.getPointerPosition());
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
           DD.justDragged = false;
-          Konva.listenClickTap = true;
-          if (shape && shape.isListening()) {
-              this.clickStartShape = shape;
-              shape._fireAndBubble(MOUSEDOWN, { evt: evt, pointerId: pointerId });
+          if (evt.isPrimary && (evt.pointerType !== 'mouse' || evt.button === 0)) {
+              Konva.listenClickTap = { pointerId: pointerId, x: 0, y: 0, at: Date.now() };
           }
           else {
-              this._fire(MOUSEDOWN, {
+              Konva.listenClickTap = null;
+          }
+          clearTimeout(this.pressTimeout);
+          if (evt.isPrimary && evt.pointerType !== 'mouse') {
+              this.pressTimeout = setTimeout(function () {
+                  var firePress = Konva.listenClickTap != null &&
+                      Math.hypot(Konva.listenClickTap.x, Konva.listenClickTap.y) <= Konva.clickDistance &&
+                      !DD.isDragging;
+                  if (!firePress) {
+                      return;
+                  }
+                  // clear click & double click
+                  Konva.listenClickTap = null;
+                  clearTimeout(_this.dblTimeout);
+                  // send press event
+                  var pressShape = _this.clickStartShape;
+                  if (pressShape != null && pressShape.isListening()) {
+                      pressShape._fireAndBubble(PRESS, { evt: evt, pointerId: pointerId });
+                  }
+                  else {
+                      _this._fire(PRESS, {
+                          evt: evt,
+                          target: _this,
+                          currentTarget: _this,
+                          pointerId: pointerId
+                      });
+                  }
+              }, Konva.pressWindow);
+          }
+          if (shape && shape.isListening()) {
+              this.clickStartShape = shape;
+              shape._fireAndBubble(POINTERDOWN, { evt: evt, pointerId: pointerId });
+          }
+          else {
+              this._fire(POINTERDOWN, {
                   evt: evt,
                   target: this,
                   currentTarget: this,
@@ -6167,40 +6269,48 @@
               });
           }
           // content event
-          this._fire(CONTENT_MOUSEDOWN, { evt: evt });
+          this._fire(CONTENT_POINTERDOWN, { evt: evt });
           // Do not prevent default behavior, because it will prevent listening events outside of window iframe
           // we used preventDefault for disabling native drag&drop
           // but userSelect = none style will do the trick
-          // if (evt.cancelable) {
-          //   evt.preventDefault();
-          // }
+          if (evt.cancelable) {
+              evt.preventDefault();
+          }
       };
-      Stage.prototype._mouseup = function (evt) {
-          // workaround for mobile IE to force touch event when unhandled pointer event elevates into a mouse event
-          if (Konva.UA.ieMobile) {
-              return this._touchend(evt);
-          }
+      Stage.prototype._pointerup = function (evt) {
           this.setPointersPositions(evt);
-          var pointerId = Util._getFirstPointerId(evt);
-          var shape = this.getIntersection(this.getPointerPosition()), clickStartShape = this.clickStartShape, clickEndShape = this.clickEndShape, fireDblClick = false;
-          if (Konva.inDblClickWindow) {
-              fireDblClick = true;
-              clearTimeout(this.dblTimeout);
-              // Konva.inDblClickWindow = false;
-          }
-          else if (!DD.justDragged) {
-              // don't set inDblClickWindow after dragging
-              Konva.inDblClickWindow = true;
-              clearTimeout(this.dblTimeout);
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId)), clickStartShape = this.clickStartShape, clickEndShape = this.clickEndShape, fireDblClick = false;
+          var fireClick = Konva.listenClickTap != null &&
+              Konva.listenClickTap.pointerId === pointerId &&
+              Math.hypot(Konva.listenClickTap.x, Konva.listenClickTap.y) <= Konva.clickDistance &&
+              (
+              // ignore click-window for mice
+              (evt.pointerType === 'mouse' && evt.button === 0) ||
+                  (evt.pointerType !== 'mouse' && Date.now() < Konva.listenClickTap.at + Konva.clickWindow));
+          Konva.listenClickTap = null;
+          clearTimeout(this.pressTimeout);
+          if (fireClick) {
+              if (Konva.inDblClickWindow) {
+                  fireDblClick = true;
+                  clearTimeout(this.dblTimeout);
+                  // Konva.inDblClickWindow = false;
+              }
+              else if (!DD.justDragged) {
+                  // don't set inDblClickWindow after dragging
+                  Konva.inDblClickWindow = true;
+                  clearTimeout(this.dblTimeout);
+              }
           }
           this.dblTimeout = setTimeout(function () {
               Konva.inDblClickWindow = false;
           }, Konva.dblClickWindow);
           if (shape && shape.isListening()) {
               this.clickEndShape = shape;
-              shape._fireAndBubble(MOUSEUP, { evt: evt, pointerId: pointerId });
+              shape._fireAndBubble(POINTERUP, { evt: evt, pointerId: pointerId });
               // detect if click or double click occurred
-              if (Konva.listenClickTap &&
+              if (fireClick &&
                   clickStartShape &&
                   clickStartShape._id === shape._id) {
                   shape._fireAndBubble(CLICK, { evt: evt, pointerId: pointerId });
@@ -6210,13 +6320,13 @@
               }
           }
           else {
-              this._fire(MOUSEUP, {
+              this._fire(POINTERUP, {
                   evt: evt,
                   target: this,
                   currentTarget: this,
                   pointerId: pointerId
               });
-              if (Konva.listenClickTap) {
+              if (fireClick) {
                   this._fire(CLICK, {
                       evt: evt,
                       target: this,
@@ -6234,14 +6344,13 @@
               }
           }
           // content events
-          this._fire(CONTENT_MOUSEUP, { evt: evt });
-          if (Konva.listenClickTap) {
+          this._fire(CONTENT_POINTERUP, { evt: evt });
+          if (fireClick) {
               this._fire(CONTENT_CLICK, { evt: evt });
               if (fireDblClick) {
                   this._fire(CONTENT_DBL_CLICK, { evt: evt });
               }
           }
-          Konva.listenClickTap = false;
           // always call preventDefault for desktop events because some browsers
           // try to drag and drop the canvas element
           if (evt.cancelable) {
@@ -6250,7 +6359,9 @@
       };
       Stage.prototype._contextmenu = function (evt) {
           this.setPointersPositions(evt);
-          var shape = this.getIntersection(this.getPointerPosition());
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
           if (shape && shape.isListening()) {
               shape._fireAndBubble(CONTEXTMENU, { evt: evt });
           }
@@ -6263,166 +6374,11 @@
           }
           this._fire(CONTENT_CONTEXTMENU, { evt: evt });
       };
-      Stage.prototype._touchstart = function (evt) {
-          var _this = this;
-          this.setPointersPositions(evt);
-          var triggeredOnShape = false;
-          this._changedPointerPositions.forEach(function (pos) {
-              var shape = _this.getIntersection(pos);
-              Konva.listenClickTap = true;
-              DD.justDragged = false;
-              var hasShape = shape && shape.isListening();
-              if (!hasShape) {
-                  return;
-              }
-              if (Konva.captureTouchEventsEnabled) {
-                  shape.setPointerCapture(pos.id);
-              }
-              _this.tapStartShape = shape;
-              shape._fireAndBubble(TOUCHSTART, { evt: evt, pointerId: pos.id }, _this);
-              triggeredOnShape = true;
-              // only call preventDefault if the shape is listening for events
-              if (shape.isListening() && shape.preventDefault() && evt.cancelable) {
-                  evt.preventDefault();
-              }
-          });
-          if (!triggeredOnShape) {
-              this._fire(TOUCHSTART, {
-                  evt: evt,
-                  target: this,
-                  currentTarget: this,
-                  pointerId: this._changedPointerPositions[0].id
-              });
-          }
-          // content event
-          this._fire(CONTENT_TOUCHSTART, { evt: evt });
-      };
-      Stage.prototype._touchmove = function (evt) {
-          var _this = this;
-          this.setPointersPositions(evt);
-          var eventsEnabled = !DD.isDragging || Konva.hitOnDragEnabled;
-          if (eventsEnabled) {
-              var triggeredOnShape = false;
-              var processedShapesIds = {};
-              this._changedPointerPositions.forEach(function (pos) {
-                  var shape = getCapturedShape(pos.id) || _this.getIntersection(pos);
-                  var hasShape = shape && shape.isListening();
-                  if (!hasShape) {
-                      return;
-                  }
-                  if (processedShapesIds[shape._id]) {
-                      return;
-                  }
-                  processedShapesIds[shape._id] = true;
-                  shape._fireAndBubble(TOUCHMOVE, { evt: evt, pointerId: pos.id });
-                  triggeredOnShape = true;
-                  // only call preventDefault if the shape is listening for events
-                  if (shape.isListening() && shape.preventDefault() && evt.cancelable) {
-                      evt.preventDefault();
-                  }
-              });
-              if (!triggeredOnShape) {
-                  this._fire(TOUCHMOVE, {
-                      evt: evt,
-                      target: this,
-                      currentTarget: this,
-                      pointerId: this._changedPointerPositions[0].id
-                  });
-              }
-              this._fire(CONTENT_TOUCHMOVE, { evt: evt });
-          }
-          if (DD.isDragging && DD.node.preventDefault() && evt.cancelable) {
-              evt.preventDefault();
-          }
-      };
-      Stage.prototype._touchend = function (evt) {
-          var _this = this;
-          this.setPointersPositions(evt);
-          var clickEndShape = this.clickEndShape, fireDblClick = false;
-          if (Konva.inDblClickWindow) {
-              fireDblClick = true;
-              clearTimeout(this.dblTimeout);
-              // Konva.inDblClickWindow = false;
-          }
-          else if (!DD.justDragged) {
-              Konva.inDblClickWindow = true;
-              clearTimeout(this.dblTimeout);
-          }
-          this.dblTimeout = setTimeout(function () {
-              Konva.inDblClickWindow = false;
-          }, Konva.dblClickWindow);
-          var triggeredOnShape = false;
-          var processedShapesIds = {};
-          var tapTriggered = false;
-          var dblTapTriggered = false;
-          this._changedPointerPositions.forEach(function (pos) {
-              var shape = getCapturedShape(pos.id) ||
-                  _this.getIntersection(pos);
-              if (shape) {
-                  shape.releaseCapture(pos.id);
-              }
-              var hasShape = shape && shape.isListening();
-              if (!hasShape) {
-                  return;
-              }
-              if (processedShapesIds[shape._id]) {
-                  return;
-              }
-              processedShapesIds[shape._id] = true;
-              _this.clickEndShape = shape;
-              shape._fireAndBubble(TOUCHEND, { evt: evt, pointerId: pos.id });
-              triggeredOnShape = true;
-              // detect if tap or double tap occurred
-              if (Konva.listenClickTap && shape === _this.tapStartShape) {
-                  tapTriggered = true;
-                  shape._fireAndBubble(TAP, { evt: evt, pointerId: pos.id });
-                  if (fireDblClick && clickEndShape && clickEndShape === shape) {
-                      dblTapTriggered = true;
-                      shape._fireAndBubble(DBL_TAP, { evt: evt, pointerId: pos.id });
-                  }
-              }
-              // only call preventDefault if the shape is listening for events
-              if (shape.isListening() && shape.preventDefault() && evt.cancelable) {
-                  evt.preventDefault();
-              }
-          });
-          if (!triggeredOnShape) {
-              this._fire(TOUCHEND, {
-                  evt: evt,
-                  target: this,
-                  currentTarget: this,
-                  pointerId: this._changedPointerPositions[0].id
-              });
-          }
-          if (Konva.listenClickTap && !tapTriggered) {
-              this._fire(TAP, {
-                  evt: evt,
-                  target: this,
-                  currentTarget: this,
-                  pointerId: this._changedPointerPositions[0].id
-              });
-          }
-          if (fireDblClick && !dblTapTriggered) {
-              this._fire(DBL_TAP, {
-                  evt: evt,
-                  target: this,
-                  currentTarget: this,
-                  pointerId: this._changedPointerPositions[0].id
-              });
-          }
-          // content events
-          this._fire(CONTENT_TOUCHEND, { evt: evt });
-          if (Konva.listenClickTap) {
-              this._fire(CONTENT_TAP, { evt: evt });
-              if (fireDblClick) {
-                  this._fire(CONTENT_DBL_TAP, { evt: evt });
-              }
-          }
-          Konva.listenClickTap = false;
-      };
       Stage.prototype._wheel = function (evt) {
           this.setPointersPositions(evt);
-          var shape = this.getIntersection(this.getPointerPosition());
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
           if (shape && shape.isListening()) {
               shape._fireAndBubble(WHEEL, { evt: evt });
           }
@@ -6435,54 +6391,26 @@
           }
           this._fire(CONTENT_WHEEL, { evt: evt });
       };
-      Stage.prototype._pointerdown = function (evt) {
-          if (!Konva._pointerEventsEnabled) {
-              return;
-          }
-          this.setPointersPositions(evt);
-          var shape = getCapturedShape(evt.pointerId) ||
-              this.getIntersection(this.getPointerPosition());
-          if (shape) {
-              shape._fireAndBubble(POINTERDOWN, createEvent(evt));
-          }
-      };
-      Stage.prototype._pointermove = function (evt) {
-          if (!Konva._pointerEventsEnabled) {
-              return;
-          }
-          this.setPointersPositions(evt);
-          var shape = getCapturedShape(evt.pointerId) ||
-              this.getIntersection(this.getPointerPosition());
-          if (shape) {
-              shape._fireAndBubble(POINTERMOVE, createEvent(evt));
-          }
-      };
-      Stage.prototype._pointerup = function (evt) {
-          if (!Konva._pointerEventsEnabled) {
-              return;
-          }
-          this.setPointersPositions(evt);
-          var shape = getCapturedShape(evt.pointerId) ||
-              this.getIntersection(this.getPointerPosition());
-          if (shape) {
-              shape._fireAndBubble(POINTERUP, createEvent(evt));
-          }
-          releaseCapture(evt.pointerId);
-      };
       Stage.prototype._pointercancel = function (evt) {
-          if (!Konva._pointerEventsEnabled) {
-              return;
-          }
           this.setPointersPositions(evt);
-          var shape = getCapturedShape(evt.pointerId) ||
-              this.getIntersection(this.getPointerPosition());
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
           if (shape) {
-              shape._fireAndBubble(POINTERUP, createEvent(evt));
+              shape._fireAndBubble(POINTERCANCEL, { evt: evt, pointerId: pointerId });
           }
           releaseCapture(evt.pointerId);
+          this._fire(CONTENT_POINTERCANCEL, { evt: evt });
       };
       Stage.prototype._lostpointercapture = function (evt) {
+          var pointerId = evt.pointerId;
+          var shape = getCapturedShape(pointerId)
+              || this.getIntersection(this._getPointerById(pointerId));
+          if (shape) {
+              shape._fireAndBubble(LOSTPOINTERCAPTURE, { evt: evt, pointerId: pointerId });
+          }
           releaseCapture(evt.pointerId);
+          this._fire(CONTENT_LOSTPOINTERCAPTURE, { evt: evt });
       };
       /**
        * manually register pointers positions (mouse/touch) in the stage.
@@ -6499,43 +6427,26 @@
        * });
        */
       Stage.prototype.setPointersPositions = function (evt) {
-          var _this = this;
-          var contentPosition = this._getContentPosition(), x = null, y = null;
-          evt = evt ? evt : window.event;
-          // touch events
-          if (evt.touches !== undefined) {
-              // touchlist has not support for map method
-              // so we have to iterate
-              this._pointerPositions = [];
-              this._changedPointerPositions = [];
-              Collection.prototype.each.call(evt.touches, function (touch) {
-                  _this._pointerPositions.push({
-                      id: touch.identifier,
-                      x: (touch.clientX - contentPosition.left) / contentPosition.scaleX,
-                      y: (touch.clientY - contentPosition.top) / contentPosition.scaleY
-                  });
-              });
-              Collection.prototype.each.call(evt.changedTouches || evt.touches, function (touch) {
-                  _this._changedPointerPositions.push({
-                      id: touch.identifier,
-                      x: (touch.clientX - contentPosition.left) / contentPosition.scaleX,
-                      y: (touch.clientY - contentPosition.top) / contentPosition.scaleY
-                  });
-              });
+          if (evt.pointerId == null) {
+              return;
+          }
+          var contentPosition = this._getContentPosition();
+          var x = (evt.clientX - contentPosition.left) / contentPosition.scaleX;
+          var y = (evt.clientY - contentPosition.top) / contentPosition.scaleY;
+          if (evt.pointerType !== 'mouse' && (evt.type === 'pointerup' || evt.type === 'pointercancel')) {
+              this._pointerPositions.delete(evt.pointerId);
           }
           else {
-              // mouse events
-              x = (evt.clientX - contentPosition.left) / contentPosition.scaleX;
-              y = (evt.clientY - contentPosition.top) / contentPosition.scaleY;
-              this.pointerPos = {
-                  x: x,
-                  y: y
-              };
-              this._pointerPositions = [{ x: x, y: y, id: Util._getFirstPointerId(evt) }];
-              this._changedPointerPositions = [
-                  { x: x, y: y, id: Util._getFirstPointerId(evt) }
-              ];
+              this._pointerPositions.set(evt.pointerId, {
+                  x: x, y: y,
+                  pointerId: evt.pointerId, pointerType: evt.pointerType, isPrimary: evt.isPrimary
+              });
           }
+          this._changedPointerPositions.clear();
+          this._changedPointerPositions.set(evt.pointerId, {
+              x: x, y: y,
+              pointerId: evt.pointerId, pointerType: evt.pointerType, isPrimary: evt.isPrimary
+          });
       };
       Stage.prototype._setPointerPosition = function (evt) {
           Util.warn('Method _setPointerPosition is deprecated. Use "stage.setPointersPositions(event)" instead.');
@@ -6943,7 +6854,7 @@
       dummyContext = Util.createCanvasElement().getContext('2d');
       return dummyContext;
   }
-  var shapes = {};
+  var shapes = new Map();
   // TODO: idea - use only "remove" (or destroy method)
   // how? on add, check that every inner shape has reference in konva store with color
   // on remove - clear that reference
@@ -7077,15 +6988,16 @@
       function Shape(config) {
           var _this = _super.call(this, config) || this;
           // set colorKey
-          var key;
+          var colorId;
           while (true) {
-              key = Util.getRandomColor();
-              if (key && !(key in shapes)) {
+              colorId = Util.getRandom24bit();
+              if (!shapes.has(colorId)) {
                   break;
               }
           }
-          _this.colorKey = key;
-          shapes[key] = _this;
+          _this.colorId = colorId;
+          _this.colorKey = Util._24bitToHex(colorId);
+          shapes.set(colorId, _this);
           _this.on('shadowColorChange.konva shadowBlurChange.konva shadowOffsetChange.konva shadowOpacityChange.konva shadowEnabledChange.konva', _clearHasShadowCache);
           _this.on('shadowColorChange.konva shadowOpacityChange.konva shadowEnabledChange.konva', _clearGetShadowRGBACache);
           _this.on('fillPriorityChange.konva fillPatternImageChange.konva fillPatternRepeatChange.konva fillPatternScaleXChange.konva fillPatternScaleYChange.konva', _clearFillPatternCache);
@@ -7257,8 +7169,9 @@
       };
       Shape.prototype.destroy = function () {
           Node.prototype.destroy.call(this);
-          delete shapes[this.colorKey];
-          delete this.colorKey;
+          shapes.delete(this.colorId);
+          this.colorId = null;
+          this.colorKey = null;
           return this;
       };
       // why do we need buffer canvas?
@@ -7371,6 +7284,7 @@
               bufferContext = bufferCanvas.getContext();
               bufferContext.clear();
               bufferContext.save();
+              bufferContext._applyMiterLimit(this);
               bufferContext._applyLineJoin(this);
               // layer might be undefined if we are using cache before adding to layer
               if (!caching) {
@@ -7401,6 +7315,7 @@
           }
           else {
               // if buffer canvas is not needed
+              context._applyMiterLimit(this);
               context._applyLineJoin(this);
               // layer might be undefined if we are using cache before adding to layer
               if (!caching) {
@@ -7452,7 +7367,7 @@
       };
       Shape.prototype.drawHit = function (can, top, caching) {
           var layer = this.getLayer(), canvas = can || layer.hitCanvas, context = canvas && canvas.getContext(), drawFunc = this.hitFunc() || this.sceneFunc(), cachedCanvas = this._getCanvasCache(), cachedHitCanvas = cachedCanvas && cachedCanvas.hit;
-          if (!this.colorKey) {
+          if (this.colorKey == null) {
               console.log(this);
               Util.warn('Looks like your canvas has a destroyed shape in it. Do not reuse shape after you destroyed it. See the shape in logs above. If you want to reuse shape you should call remove() instead of destroy()');
           }
@@ -7470,6 +7385,7 @@
               return this;
           }
           context.save();
+          context._applyMiterLimit(this);
           context._applyLineJoin(this);
           if (!caching) {
               if (layer) {
@@ -7649,6 +7565,20 @@
    *
    * // set shadowForStrokeEnabled
    * shape.shadowForStrokeEnabled();
+   */
+  Factory.addGetterSetter(Shape, 'miterLimit');
+  /**
+   * get/set miterLimit.
+   * @name Konva.Shape#miterLimit
+   * @method
+   * @param {Number} miterLimit
+   * @returns {Number}
+   * @example
+   * // get miter limit
+   * var miterLimit = shape.miterLimit();
+   *
+   * // set miter limit
+   * shape.miterLimit(10);
    */
   Factory.addGetterSetter(Shape, 'lineJoin');
   /**
@@ -8528,7 +8458,7 @@
   Collection.mapMethods(Shape);
 
   // constants
-  var HASH$1 = '#', BEFORE_DRAW = 'beforeDraw', DRAW = 'draw', 
+  var BEFORE_DRAW = 'beforeDraw', DRAW = 'draw', 
   /*
    * 2 - 3 - 4
    * |       |
@@ -8665,8 +8595,8 @@
           var p = this.hitCanvas.context.getImageData(Math.round(pos.x * ratio), Math.round(pos.y * ratio), 1, 1).data, p3 = p[3], colorKey, shape;
           // fully opaque pixel
           if (p3 === 255) {
-              colorKey = Util._rgbToHex(p[0], p[1], p[2]);
-              shape = shapes[HASH$1 + colorKey];
+              colorKey = Util._rgbTo24bit(p[0], p[1], p[2]);
+              shape = shapes.get(colorKey);
               if (shape) {
                   return {
                       shape: shape
@@ -8685,27 +8615,28 @@
           // empty pixel
           return {};
       };
-      Layer.prototype.drawScene = function (can, top) {
-          var layer = this.getLayer(), canvas = can || (layer && layer.getCanvas());
+      Layer.prototype.drawScene = function () {
           this._fire(BEFORE_DRAW, {
               node: this
           });
+          var canvas = this.getCanvas();
+          var context = canvas.getContext();
+          context.reset();
           if (this.clearBeforeDraw()) {
-              canvas.getContext().clear();
+              context.clear();
           }
-          Container.prototype.drawScene.call(this, canvas, top);
+          Container.prototype.drawScene.call(this, canvas);
           this._fire(DRAW, {
               node: this
           });
           return this;
       };
       Layer.prototype.drawHit = function (can, top) {
-          var layer = this.getLayer(), canvas = can || (layer && layer.hitCanvas);
-          if (layer && layer.clearBeforeDraw()) {
-              layer
-                  .getHitCanvas()
-                  .getContext()
-                  .clear();
+          var canvas = this.getHitCanvas();
+          var context = canvas.getContext();
+          context.reset();
+          if (this.clearBeforeDraw()) {
+              context.clear();
           }
           Container.prototype.drawHit.call(this, canvas, top);
           return this;
@@ -10024,6 +9955,195 @@
   Collection.mapMethods(Arc);
 
   /**
+   * ArcPath constructor.
+   * @author Jason Follas
+   * @constructor
+   * @memberof Konva
+   * @augments Konva.Shape
+   * @param {Object} config
+   * @param {String} config.data SVG data string
+   * @param {String} [config.fill] fill color
+     * @param {Image} [config.fillPatternImage] fill pattern image
+     * @param {Number} [config.fillPatternX]
+     * @param {Number} [config.fillPatternY]
+     * @param {Object} [config.fillPatternOffset] object with x and y component
+     * @param {Number} [config.fillPatternOffsetX] 
+     * @param {Number} [config.fillPatternOffsetY] 
+     * @param {Object} [config.fillPatternScale] object with x and y component
+     * @param {Number} [config.fillPatternScaleX]
+     * @param {Number} [config.fillPatternScaleY]
+     * @param {Number} [config.fillPatternRotation]
+     * @param {String} [config.fillPatternRepeat] can be "repeat", "repeat-x", "repeat-y", or "no-repeat".  The default is "no-repeat"
+     * @param {Object} [config.fillLinearGradientStartPoint] object with x and y component
+     * @param {Number} [config.fillLinearGradientStartPointX]
+     * @param {Number} [config.fillLinearGradientStartPointY]
+     * @param {Object} [config.fillLinearGradientEndPoint] object with x and y component
+     * @param {Number} [config.fillLinearGradientEndPointX]
+     * @param {Number} [config.fillLinearGradientEndPointY]
+     * @param {Array} [config.fillLinearGradientColorStops] array of color stops
+     * @param {Object} [config.fillRadialGradientStartPoint] object with x and y component
+     * @param {Number} [config.fillRadialGradientStartPointX]
+     * @param {Number} [config.fillRadialGradientStartPointY]
+     * @param {Object} [config.fillRadialGradientEndPoint] object with x and y component
+     * @param {Number} [config.fillRadialGradientEndPointX] 
+     * @param {Number} [config.fillRadialGradientEndPointY] 
+     * @param {Number} [config.fillRadialGradientStartRadius]
+     * @param {Number} [config.fillRadialGradientEndRadius]
+     * @param {Array} [config.fillRadialGradientColorStops] array of color stops
+     * @param {Boolean} [config.fillEnabled] flag which enables or disables the fill.  The default value is true
+     * @param {String} [config.fillPriority] can be color, linear-gradient, radial-graident, or pattern.  The default value is color.  The fillPriority property makes it really easy to toggle between different fill types.  For example, if you want to toggle between a fill color style and a fill pattern style, simply set the fill property and the fillPattern properties, and then use setFillPriority('color') to render the shape with a color fill, or use setFillPriority('pattern') to render the shape with the pattern fill configuration
+     * @param {String} [config.stroke] stroke color
+     * @param {Number} [config.strokeWidth] stroke width
+     * @param {Number} [config.hitStrokeWidth] size of the stroke on hit canvas.  The default is "auto" - equals to strokeWidth
+     * @param {Boolean} [config.strokeHitEnabled] flag which enables or disables stroke hit region.  The default is true
+     * @param {Boolean} [config.perfectDrawEnabled] flag which enables or disables using buffer canvas.  The default is true
+     * @param {Boolean} [config.shadowForStrokeEnabled] flag which enables or disables shasow for stroke.  The default is true
+     * @param {Boolean} [config.strokeScaleEnabled] flag which enables or disables stroke scale.  The default is true
+     * @param {Boolean} [config.strokeEnabled] flag which enables or disables the stroke.  The default value is true
+     * @param {String} [config.lineJoin] can be miter, round, or bevel.  The default
+     *  is miter
+     * @param {String} [config.lineCap] can be butt, round, or sqare.  The default
+     *  is butt
+     * @param {String} [config.shadowColor]
+     * @param {Number} [config.shadowBlur]
+     * @param {Object} [config.shadowOffset] object with x and y component
+     * @param {Number} [config.shadowOffsetX]
+     * @param {Number} [config.shadowOffsetY]
+     * @param {Number} [config.shadowOpacity] shadow opacity.  Can be any real number
+     *  between 0 and 1
+     * @param {Boolean} [config.shadowEnabled] flag which enables or disables the shadow.  The default value is true
+     * @param {Array} [config.dash]
+     * @param {Boolean} [config.dashEnabled] flag which enables or disables the dashArray.  The default value is true
+   * @param {Number} [config.x]
+     * @param {Number} [config.y]
+     * @param {Number} [config.width]
+     * @param {Number} [config.height]
+     * @param {Boolean} [config.visible]
+     * @param {Boolean} [config.listening] whether or not the node is listening for events
+     * @param {String} [config.id] unique id
+     * @param {String} [config.name] non-unique name
+     * @param {Number} [config.opacity] determines node opacity.  Can be any number between 0 and 1
+     * @param {Object} [config.scale] set scale
+     * @param {Number} [config.scaleX] set scale x
+     * @param {Number} [config.scaleY] set scale y
+     * @param {Number} [config.rotation] rotation in degrees
+     * @param {Object} [config.offset] offset from center point and rotation point
+     * @param {Number} [config.offsetX] set offset x
+     * @param {Number} [config.offsetY] set offset y
+     * @param {Boolean} [config.draggable] makes the node draggable.  When stages are draggable, you can drag and drop
+     *  the entire stage by dragging any portion of the stage
+     * @param {Number} [config.dragDistance]
+     * @param {Function} [config.dragBoundFunc]
+   */
+  var ArcPath = /** @class */ (function (_super) {
+      __extends(ArcPath, _super);
+      function ArcPath(config) {
+          var _this = _super.call(this, config) || this;
+          _this.dataArray = [];
+          _this.dataArray = ArcPath.parsePathData(_this.data());
+          _this.on('dataChange.konva', function () {
+              this.dataArray = ArcPath.parsePathData(this.data());
+          });
+          return _this;
+      }
+      ArcPath.prototype._sceneFunc = function (context) {
+          var points = this.dataArray;
+          if (points == null) {
+              return;
+          }
+          context.beginPath();
+          var L = points.length;
+          context.moveTo(points[0], points[1]);
+          var n = 2;
+          while (n < L) {
+              var remainder = L - n;
+              if (remainder >= 4) {
+                  context.quadraticCurveTo(points[n++], points[n++], points[n++], points[n++]);
+              }
+              else if (remainder >= 2) {
+                  context.lineTo(points[n++], points[n++]);
+              }
+              else {
+                  break;
+              }
+          }
+          context.fillStrokeShape(this);
+      };
+      ArcPath.prototype.getSelfRect = function () {
+          var q = this.dataArray;
+          if (q == null || q.length < 6) {
+              return { x: 0, y: 0, width: 0, height: 0 };
+          }
+          var minX = Infinity;
+          var minY = Infinity;
+          var maxX = -Infinity;
+          var maxY = -Infinity;
+          for (var i = 6; i <= q.length; i += 4) {
+              var x1 = q[i - 6];
+              var y1 = q[i - 5];
+              var px = q[i - 4];
+              var py = q[i - 3];
+              var x2 = q[i - 2];
+              var y2 = q[i - 1];
+              minX = Math.min(minX, x1, px, x2);
+              minY = Math.min(minY, y1, py, y2);
+              maxX = Math.max(maxX, x1, px, x2);
+              maxY = Math.max(maxY, y1, py, y2);
+          }
+          return {
+              x: Math.floor(minX),
+              y: Math.floor(minY),
+              width: Math.ceil(maxX) - Math.floor(minX),
+              height: Math.ceil(maxY) - Math.floor(minY),
+          };
+      };
+      ArcPath.parsePathData = function (data) {
+          if (data == null || data.length < 6) {
+              return null;
+          }
+          // implement in a single loop to optimise
+          var dataArray = [data[0], data[1]];
+          for (var i = 6; i <= data.length; i += 4) {
+              var x1 = data[i - 6];
+              var y1 = data[i - 5];
+              var px = data[i - 4];
+              var py = data[i - 3];
+              var x2 = data[i - 2];
+              var y2 = data[i - 1];
+              var d0 = Math.hypot(x1 - px, y1 - py);
+              var d1 = Math.hypot(x2 - px, y2 - py);
+              var t = d0 / (d0 + d1);
+              // TODO check if this t bounds check is OK
+              if (Number.isFinite(t) && t > 0 && t < 1) {
+                  var t1 = 1 - t;
+                  var cx = px / (2 * t * t1) - (x2 * t) / (2 * t1) - (x1 * t1) / (2 * t);
+                  var cy = py / (2 * t * t1) - (y2 * t) / (2 * t1) - (y1 * t1) / (2 * t);
+                  dataArray.push(cx, cy, x2, y2);
+              }
+          }
+          return dataArray;
+      };
+      return ArcPath;
+  }(Shape));
+  ArcPath.prototype.className = 'ArcPath';
+  ArcPath.prototype._attrsAffectingSize = ['data'];
+  _registerNode(ArcPath);
+  /**
+   * @name Konva.ArcPath#data
+   * @method
+   * @param {Array} points / control points of arc
+   * @returns {String}
+   * @example
+   * // get data
+   * var data = path.data();
+   *
+   * // set data
+   * path.data([0, 0, 1, 1, 2, 2]);
+   */
+  Factory.addGetterSetter(ArcPath, 'data');
+  Collection.mapMethods(ArcPath);
+
+  /**
    * Line constructor.&nbsp; Lines are defined by an array of points and
    *  a tension
    * @constructor
@@ -10994,12 +11114,12 @@
       Image.prototype.getWidth = function () {
           var _a;
           var image = this.image();
-          return _a = this.attrs.width, (_a !== null && _a !== void 0 ? _a : (image ? image.width : 0));
+          return (_a = this.attrs.width) !== null && _a !== void 0 ? _a : (image ? image.width : 0);
       };
       Image.prototype.getHeight = function () {
           var _a;
           var image = this.image();
-          return _a = this.attrs.height, (_a !== null && _a !== void 0 ? _a : (image ? image.height : 0));
+          return (_a = this.attrs.height) !== null && _a !== void 0 ? _a : (image ? image.height : 0);
       };
       /**
        * load image from given url and create `Konva.Image` instance
@@ -12698,6 +12818,108 @@
   Factory.addGetterSetter(Ring, 'outerRadius', 0, getNumberValidator());
   Collection.mapMethods(Ring);
 
+  function _fillFunc$1(context) {
+      var path = this.path();
+      context._context.fill(path);
+  }
+  function _strokeFunc$1(context) {
+      var path = this.path();
+      context._context.stroke(path);
+  }
+  function _fillFuncHit$1(context) {
+      var hitPath = this.hitPath();
+      if (hitPath != null) {
+          context._context.fill(hitPath);
+      }
+      else {
+          var path = this.path();
+          if (path != null) {
+              context._context.fill(path);
+          }
+      }
+  }
+  function _strokeFuncHit$1(context) {
+      var hitPath = this.hitPath();
+      if (hitPath != null) {
+          context._context.stroke(hitPath);
+      }
+      else {
+          var path = this.path();
+          if (path != null) {
+              context._context.stroke(path);
+          }
+      }
+  }
+  var Shape2D = /** @class */ (function (_super) {
+      __extends(Shape2D, _super);
+      function Shape2D(config) {
+          return _super.call(this, config) || this;
+      }
+      Shape2D.prototype._sceneFunc = function (context) {
+          var viewBox = this.viewBox();
+          if (viewBox == null) {
+              return;
+          }
+          var width = this.width();
+          var height = this.height();
+          var scaleX = width / viewBox.width;
+          var scaleY = height / viewBox.height;
+          context.scale(scaleX, scaleY);
+          context.translate(-viewBox.xmin, -viewBox.ymin);
+          context.fillStrokeShape(this);
+      };
+      Shape2D.prototype._hitFunc = function (context) {
+          var _a;
+          var viewBox = (_a = this.hitViewBox()) !== null && _a !== void 0 ? _a : this.viewBox();
+          if (viewBox == null) {
+              return;
+          }
+          var width = this.width();
+          var height = this.height();
+          var scaleX = width / viewBox.width;
+          var scaleY = height / viewBox.height;
+          context.scale(scaleX, scaleY);
+          context.translate(-viewBox.xmin, -viewBox.ymin);
+          context.fillStrokeShape(this);
+      };
+      Shape2D.prototype.getWidth = function () {
+          var _a;
+          var viewBox = this.viewBox();
+          return (_a = this.attrs.width) !== null && _a !== void 0 ? _a : (viewBox ? viewBox.width : 0);
+      };
+      Shape2D.prototype.getHeight = function () {
+          var _a;
+          var viewBox = this.viewBox();
+          return (_a = this.attrs.height) !== null && _a !== void 0 ? _a : (viewBox ? viewBox.height : 0);
+      };
+      return Shape2D;
+  }(Shape));
+  Shape2D.prototype._fillFunc = _fillFunc$1;
+  Shape2D.prototype._strokeFunc = _strokeFunc$1;
+  Shape2D.prototype._fillFuncHit = _fillFuncHit$1;
+  Shape2D.prototype._strokeFuncHit = _strokeFuncHit$1;
+  Shape2D.prototype.className = 'Shape2D';
+  Shape2D.prototype._attrsAffectingSize = ['path', 'viewBox'];
+  _registerNode(Shape2D);
+  /**
+   * get/set path object string.
+   * @name Konva.Shape2D#path
+   * @method
+   * @param {Path2D} path
+   * @returns {Path2D}
+   * @example
+   * // get path
+   * var path = shape2d.path();
+   *
+   * // set path
+   * shape2d.path(new Path2D('M200,100h100v50z'));
+   */
+  Factory.addGetterSetter(Shape2D, 'path');
+  Factory.addGetterSetter(Shape2D, 'viewBox');
+  Factory.addGetterSetter(Shape2D, 'hitPath');
+  Factory.addGetterSetter(Shape2D, 'hitViewBox');
+  Collection.mapMethods(Shape2D);
+
   /**
    * Sprite constructor
    * @constructor
@@ -13269,10 +13491,10 @@
       dummyContext$1 = Util.createCanvasElement().getContext(CONTEXT_2D);
       return dummyContext$1;
   }
-  function _fillFunc$1(context) {
+  function _fillFunc$2(context) {
       context.fillText(this._partialText, this._partialTextX, this._partialTextY);
   }
-  function _strokeFunc$1(context) {
+  function _strokeFunc$2(context) {
       context.strokeText(this._partialText, this._partialTextX, this._partialTextY);
   }
   function checkDefaultFill(config) {
@@ -13701,8 +13923,8 @@
       };
       return Text;
   }(Shape));
-  Text.prototype._fillFunc = _fillFunc$1;
-  Text.prototype._strokeFunc = _strokeFunc$1;
+  Text.prototype._fillFunc = _fillFunc$2;
+  Text.prototype._strokeFunc = _strokeFunc$2;
   Text.prototype.className = TEXT_UPPER;
   Text.prototype._attrsAffectingSize = [
       'text',
@@ -13938,10 +14160,10 @@
   Collection.mapMethods(Text);
 
   var EMPTY_STRING$2 = '', NORMAL$1 = 'normal';
-  function _fillFunc$2(context) {
+  function _fillFunc$3(context) {
       context.fillText(this.partialText, 0, 0);
   }
-  function _strokeFunc$2(context) {
+  function _strokeFunc$3(context) {
       context.strokeText(this.partialText, 0, 0);
   }
   /**
@@ -14411,10 +14633,10 @@
       };
       return TextPath;
   }(Shape));
-  TextPath.prototype._fillFunc = _fillFunc$2;
-  TextPath.prototype._strokeFunc = _strokeFunc$2;
-  TextPath.prototype._fillFuncHit = _fillFunc$2;
-  TextPath.prototype._strokeFuncHit = _strokeFunc$2;
+  TextPath.prototype._fillFunc = _fillFunc$3;
+  TextPath.prototype._strokeFunc = _strokeFunc$3;
+  TextPath.prototype._fillFuncHit = _fillFunc$3;
+  TextPath.prototype._strokeFuncHit = _strokeFunc$3;
   TextPath.prototype.className = 'TextPath';
   TextPath.prototype._attrsAffectingSize = ['text', 'fontSize', 'data'];
   _registerNode(TextPath);
@@ -14732,8 +14954,8 @@
           _this._transforming = false;
           _this._createElements();
           // bindings
-          _this._handleMouseMove = _this._handleMouseMove.bind(_this);
-          _this._handleMouseUp = _this._handleMouseUp.bind(_this);
+          _this._handlePointerMove = _this._handlePointerMove.bind(_this);
+          _this._handlePointerUp = _this._handlePointerUp.bind(_this);
           _this.update = _this.update.bind(_this);
           // update transformer data for certain attr changes
           _this.on(ATTR_CHANGE_LIST$2, _this.update);
@@ -14873,8 +15095,8 @@
               hitStrokeWidth: TOUCH_DEVICE ? 10 : 'auto'
           });
           var self = this;
-          anchor.on('mousedown touchstart', function (e) {
-              self._handleMouseDown(e);
+          anchor.on('pointerdown', function (e) {
+              self._handlePointerDown(e);
           });
           anchor.on('dragstart', function (e) {
               e.cancelBubble = true;
@@ -14886,7 +15108,7 @@
               e.cancelBubble = true;
           });
           // add hover styling
-          anchor.on('mouseenter', function () {
+          anchor.on('pointerenter', function () {
               var rad = Konva.getAngle(_this.getAbsoluteRotation());
               var scale = _this.getNode().getAbsoluteScale();
               // If scale.y < 0 xor scale.x < 0 we need to flip (not rotate).
@@ -14895,7 +15117,7 @@
               anchor.getStage().content.style.cursor = cursor;
               _this._cursorChange = true;
           });
-          anchor.on('mouseout', function () {
+          anchor.on('pointerout', function () {
               if (!anchor.getStage() || !anchor.getParent()) {
                   return;
               }
@@ -14924,7 +15146,8 @@
           });
           this.add(back);
       };
-      Transformer.prototype._handleMouseDown = function (e) {
+      Transformer.prototype._handlePointerDown = function (e) {
+          this._movingPointerId = e.pointerId;
           this._movingAnchorName = e.target.name().split(' ')[0];
           // var node = this.getNode();
           var attrs = this._getNodeRect();
@@ -14933,20 +15156,22 @@
           var hypotenuse = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
           this.sin = Math.abs(height / hypotenuse);
           this.cos = Math.abs(width / hypotenuse);
-          window.addEventListener('mousemove', this._handleMouseMove);
-          window.addEventListener('touchmove', this._handleMouseMove);
-          window.addEventListener('mouseup', this._handleMouseUp, true);
-          window.addEventListener('touchend', this._handleMouseUp, true);
+          window.addEventListener('pointermove', this._handlePointerMove);
+          window.addEventListener('pointerup', this._handlePointerUp, true);
+          window.addEventListener('pointercancel', this._handlePointerUp, true);
           this._transforming = true;
           this._fire('transformstart', { evt: e, target: this.getNode() });
           this.getNode()._fire('transformstart', { evt: e, target: this.getNode() });
       };
-      Transformer.prototype._handleMouseMove = function (e) {
+      Transformer.prototype._handlePointerMove = function (e) {
+          if (e.pointerId !== this._movingPointerId) {
+              return;
+          }
           var x, y, newHypotenuse;
           var anchorNode = this.findOne('.' + this._movingAnchorName);
           var stage = anchorNode.getStage();
           stage.setPointersPositions(e);
-          anchorNode.setAbsolutePosition(stage.getPointerPosition());
+          anchorNode.setAbsolutePosition(stage.getPointerById(e.pointerId));
           var keepProportion = this.keepRatio() || e.shiftKey;
           var padding = this.padding();
           if (this._movingAnchorName === 'top-left') {
@@ -15109,16 +15334,18 @@
               height: height
           }, e);
       };
-      Transformer.prototype._handleMouseUp = function (e) {
+      Transformer.prototype._handlePointerUp = function (e) {
+          if (e.pointerId !== this._movingPointerId) {
+              return;
+          }
           this._removeEvents(e);
       };
       Transformer.prototype._removeEvents = function (e) {
           if (this._transforming) {
               this._transforming = false;
-              window.removeEventListener('mousemove', this._handleMouseMove);
-              window.removeEventListener('touchmove', this._handleMouseMove);
-              window.removeEventListener('mouseup', this._handleMouseUp, true);
-              window.removeEventListener('touchend', this._handleMouseUp, true);
+              window.removeEventListener('pointermove', this._handlePointerMove);
+              window.removeEventListener('pointerup', this._handlePointerUp, true);
+              window.removeEventListener('pointercancel', this._handlePointerUp, true);
               var node = this.getNode();
               this._fire('transformend', { evt: e, target: node });
               if (node) {
@@ -17842,6 +18069,7 @@
   // we need to import core of the Konva and then extend it with all additional objects
   var Konva$2 = Konva$1.Util._assign(Konva$1, {
       Arc: Arc,
+      ArcPath: ArcPath,
       Arrow: Arrow,
       Circle: Circle,
       Ellipse: Ellipse,
@@ -17853,6 +18081,7 @@
       Rect: Rect,
       RegularPolygon: RegularPolygon,
       Ring: Ring,
+      Shape2D: Shape2D,
       Sprite: Sprite,
       Star: Star,
       Text: Text,
