@@ -578,6 +578,13 @@ export class Context {
    * @name Konva.Context#setTransform
    */
   setTransform(a0, a1, a2, a3, a4, a5) {
+    const mat = this._currentTransform;
+    mat[0] = a0;
+    mat[1] = a1;
+    mat[2] = a2;
+    mat[3] = a3;
+    mat[4] = a4;
+    mat[5] = a5;
     this._context.setTransform(a0, a1, a2, a3, a4, a5);
   }
   /**

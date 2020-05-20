@@ -95,17 +95,11 @@ export class Canvas {
     // take into account pixel ratio
     this.width = this._canvas.width = width * this.pixelRatio;
     this._canvas.style.width = width + 'px';
-
-    const pixelRatio = this.pixelRatio;
-    this.getContext().scale(pixelRatio, pixelRatio);
   }
   setHeight(height) {
     // take into account pixel ratio
     this.height = this._canvas.height = height * this.pixelRatio;
     this._canvas.style.height = height + 'px';
-
-    const pixelRatio = this.pixelRatio;
-    this.getContext().scale(pixelRatio, pixelRatio);
   }
   getWidth() {
     return this.width;

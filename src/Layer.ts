@@ -148,19 +148,18 @@ export class Layer extends BaseLayer {
     // empty pixel
     return {};
   }
-  drawScene(can, top) {
-    var layer = this.getLayer(),
-      canvas = can || (layer && layer.getCanvas());
-
+  drawScene() {
     this._fire(BEFORE_DRAW, {
       node: this
     });
 
+    const canvas = this.getCanvas();
+    const context = canvas.getContext();
+    context.reset();
     if (this.clearBeforeDraw()) {
-      canvas.getContext().clear();
+      context.clear();
     }
-
-    Container.prototype.drawScene.call(this, canvas, top);
+    Container.prototype.drawScene.call(this, canvas);
 
     this._fire(DRAW, {
       node: this
@@ -169,16 +168,13 @@ export class Layer extends BaseLayer {
     return this;
   }
   drawHit(can, top) {
-    var layer = this.getLayer(),
-      canvas = can || (layer && layer.hitCanvas);
 
-    if (layer && layer.clearBeforeDraw()) {
-      layer
-        .getHitCanvas()
-        .getContext()
-        .clear();
+    const canvas = this.getHitCanvas();
+    const context = canvas.getContext();
+    context.reset()
+    if (this.clearBeforeDraw()) {
+      context.clear()
     }
-
     Container.prototype.drawHit.call(this, canvas, top);
     return this;
   }
